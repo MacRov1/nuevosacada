@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>SCADA Semáforo 2025</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="text-center py-4 mb-4">
+    <h1 class="fw-bold text-dark">SCADA Semáforo + Cámara en vivo</h1>
+    <p class="text-muted">Introducción a los Sistemas de Control 2025</p>
+  </header>
+
+  <main class="container">
+
+    <!-- Fila con los tres paneles -->
+    <div class="row g-4">
+      <!-- Panel de Control del Semáforo -->
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-4 text-center h-100 panel">
+          <h4 class="mb-3 text-secondary">SEMÁFORO - Activar/Apagar</h4>
+          <div class="d-flex justify-content-center gap-3 mb-3">
+            <button id="activar" class="btn btn-success px-3 py-2">Activar</button>
+            <button id="apagar" class="btn btn-danger px-3 py-2">Apagar</button>
+          </div>
+          <p id="mantenimiento-status" class="fw-semibold fs-5 text-secondary">• Estado: E0</p>
+        </div>
+      </div>
+
+      <!-- Panel Estado del Semáforo -->
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-4 text-center h-100 panel">
+          <h4 class="mb-3 text-secondary">Estado del Semáforo</h4>
+          <div id="traffic-light" class="traffic-light">
+            <div id="red" class="bulb red"></div>
+            <div id="yellow" class="bulb yellow"></div>
+            <div id="green" class="bulb green"></div>
+          </div>
+          <p id="semaforo-status" class="fw-semibold fs-5 text-secondary">Estado: E0</p>
+        </div>
+      </div>
+ <!--------------------------------------------------------------------------------------------------------->
+      <!-- Panel Cámara -->
+      <div class="col-lg-4 col-md-12">
+        <div class="card p-4 text-center h-100 panel">
+          <h4 class="mb-3 text-secondary">Cámara en vivo</h4>
+          <video id="player" autoplay playsinline controls class="w-100" style="max-height: 280px; border-radius: 10px;"></video>
+        </div>
+      </div>
+    </div>
+ <!--------------------------------------------------------------------------------------------------------->
+   
+ <!-- Panel Log -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card p-3 panel">
+          <h5 class="mb-2 text-secondary">Mensajes desde MCU:</h5>
+          <ul id="mcu-log" class="mb-0"></ul>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const activarBtn = document.getElementById("activar");
+    const apagarBtn = document.getElementById("apagar");
+    const mantenimientoStatus = document.getElementById("mantenimiento-status");
+    const semaforoStatus = document.getElementById("semaforo-status");
+    const redBulb = document.getElementById("red");
+    const yellowBulb = document.getElementById("yellow");
+    const greenBulb = document.getElementById("green");
+    const log = document.getElementById("mcu-log");
+
+    activarBtn.addEventListener("click", () => socket.emit("activar"));
+    apagarBtn.addEventListener("click", () => socket.emit("apagar"));
+
+    socket.on("semaforo-status", (state) => {
+      let red = false, yellow = false, green = false;
+      let statusText = state.replace(/On|Off/g, '').trim();
+      let colorClass = "text-secondary";
+
+      switch(state){
+        case "E0": red=true; colorClass="text-danger"; break;
+        case "E1": green=true; colorClass="text-success"; break;
+        case "E2": yellow=true; colorClass="text-warning"; break;
+        case "Mantenimiento On": red=yellow=green=true; colorClass="text-muted"; break;
+        case "Mantenimiento Off": red=yellow=green=false; colorClass="text-muted"; break;
+        case "apagado": statusText="apagado"; colorClass="text-muted"; break;
+        default: statusText="desconocido";
+      }
+
+      redBulb.classList.toggle("on", red);
+      yellowBulb.classList.toggle("on", yellow);
+      greenBulb.classList.toggle("on", green);
+
+      mantenimientoStatus.textContent = `• Estado: ${statusText}`;
+      mantenimientoStatus.className = `fw-semibold fs-5 ${colorClass}`;
+      semaforoStatus.textContent = `Estado: ${statusText}`;
+      semaforoStatus.className = `fw-semibold fs-5 ${colorClass}`;
+    });
+
+    socket.on("arduino-message", (msg) => {
+      const li = document.createElement("li");
+      li.textContent = msg;
+      log.appendChild(li);
+      log.scrollTop = log.scrollHeight;
+    });
+
+
+    //---------------------------------------------------------------------------------------------------------
+    async function startVideo() {
+      const pc = new RTCPeerConnection();
+      pc.addTransceiver("video", { direction: "recvonly" });
+      pc.addTransceiver("audio", { direction: "recvonly" });
+
+      const videoEl = document.getElementById("player");
+      pc.ontrack = (event) => {
+        videoEl.srcObject = event.streams[0];
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const resp = await fetch("/whep", {
+        method: "POST",
+        headers: { "Content-Type": "application/sdp" },
+        body: offer.sdp
+      });
+
+      const answerSdp = await resp.text();
+      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+    }
+
+    startVideo().catch(console.error);
+  </script>
+
+</body>
+</html>

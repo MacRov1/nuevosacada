@@ -1,0 +1,160 @@
+/* ==========================
+   Estilos Generales
+========================== */
+body {
+  background-color: #f4f6f9;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
+
+/* ==========================
+   Paneles
+========================== */
+.panel {
+  max-width: 100%;
+  border-radius: 1rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  background-color: #ffffff;
+  padding: 1.5rem;
+  transition: transform 0.2s;
+}
+.panel:hover {
+  transform: translateY(-3px);
+}
+
+/* ==========================
+   Botones
+========================== */
+.btn-success {
+  background: linear-gradient(135deg, #4caf50, #81c784);
+  border: none;
+  color: white;
+  font-weight: 600;
+  transition: 0.3s;
+}
+.btn-success:hover {
+  background: linear-gradient(135deg, #43a047, #66bb6a);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #e53935, #ef5350);
+  border: none;
+  color: white;
+  font-weight: 600;
+  transition: 0.3s;
+}
+.btn-danger:hover {
+  background: linear-gradient(135deg, #d32f2f, #e57373);
+}
+
+/* ==========================
+   Semáforo y LEDs
+========================== */
+.traffic-light {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #222;
+  padding: 12px;
+  border-radius: 12px;
+  width: 70px;
+  margin: 0 auto;
+}
+
+.bulb {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  margin: 10px 0;
+  background-color: #444;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+/* Rojo */
+.red {
+  background-color: #660000;
+}
+.red.on {
+  background-color: red;
+  box-shadow: 0 0 20px red;
+}
+
+/* Amarillo */
+.yellow {
+  background-color: #666600;
+}
+.yellow.on {
+  background-color: yellow;
+  box-shadow: 0 0 20px yellow;
+}
+
+/* Verde */
+.green {
+  background-color: #004d00;
+}
+.green.on {
+  background-color: #4caf50;
+  box-shadow: 0 0 20px #4caf50;
+}
+
+/* ==========================
+   Indicadores de estado (pequeños LEDs)
+========================== */
+.status-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 10px;
+  background-color: #6c757d;
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.status-indicator.on {
+  background-color: #28a745;
+  box-shadow: 0 0 15px #28a745;
+}
+
+/* ==========================
+   Cámara en vivo
+========================== */
+video#player {
+  border-radius: 1rem;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+  max-height: 280px;
+  width: 100%;
+}
+
+/* ==========================
+   Log de mensajes Arduino
+========================== */
+#mcu-log {
+  max-height: 180px;
+  overflow-y: auto;
+  padding-left: 20px;
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* ==========================
+   Encabezados dentro de paneles
+========================== */
+h4, h5 {
+  color: #4b4b4b;
+  font-weight: 600;
+}
+
+/* ==========================
+   Hover y efectos generales
+========================== */
+.panel:hover {
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+}
+
+ul#log li {
+  margin-bottom: 6px;
+}
