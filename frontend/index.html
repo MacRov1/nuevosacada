@@ -8,15 +8,21 @@
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-light bg-light fixed-top">
+    <div class="container-fluid">
+      <button id="logoutBtn" class="btn btn-outline-danger btn-sm">Cerrar sesión</button>
+      <span id="welcome" class="navbar-text ms-auto"></span>
+    </div>
+  </nav>
 
   <!-- Header -->
-  <header class="text-center py-4 mb-4">
+  <header class="text-center py-4 mt-5">
     <h1 class="fw-bold text-dark">SCADA Semáforo + Cámara en vivo</h1>
     <p class="text-muted">Introducción a los Sistemas de Control 2025</p>
   </header>
 
   <main class="container">
-
     <!-- Fila con los tres paneles -->
     <div class="row g-4">
       <!-- Panel de Control del Semáforo -->
@@ -43,7 +49,7 @@
           <p id="semaforo-status" class="fw-semibold fs-5 text-secondary">Estado: E0</p>
         </div>
       </div>
- <!--------------------------------------------------------------------------------------------------------->
+
       <!-- Panel Cámara -->
       <div class="col-lg-4 col-md-12">
         <div class="card p-4 text-center h-100 panel">
@@ -52,9 +58,8 @@
         </div>
       </div>
     </div>
- <!--------------------------------------------------------------------------------------------------------->
-   
- <!-- Panel Log -->
+
+    <!-- Panel Log -->
     <div class="row mt-4">
       <div class="col-12">
         <div class="card p-3 panel">
@@ -63,7 +68,6 @@
         </div>
       </div>
     </div>
-
   </main>
 
   <!-- Scripts -->
@@ -79,22 +83,29 @@
     const greenBulb = document.getElementById("green");
     const log = document.getElementById("mcu-log");
 
-    activarBtn.addEventListener("click", () => socket.emit("activar"));
-    apagarBtn.addEventListener("click", () => socket.emit("apagar"));
+    activarBtn.addEventListener("click", () => {
+      console.log('Clic en Activar'); // Debug
+      socket.emit("activar");
+    });
+    apagarBtn.addEventListener("click", () => {
+      console.log('Clic en Apagar'); // Debug
+      socket.emit("apagar");
+    });
 
     socket.on("semaforo-status", (state) => {
+      console.log('Recibido semaforo-status:', state); // Debug
       let red = false, yellow = false, green = false;
       let statusText = state.replace(/On|Off/g, '').trim();
       let colorClass = "text-secondary";
 
-      switch(state){
-        case "E0": red=true; colorClass="text-danger"; break;
-        case "E1": green=true; colorClass="text-success"; break;
-        case "E2": yellow=true; colorClass="text-warning"; break;
-        case "Mantenimiento On": red=yellow=green=true; colorClass="text-muted"; break;
-        case "Mantenimiento Off": red=yellow=green=false; colorClass="text-muted"; break;
-        case "apagado": statusText="apagado"; colorClass="text-muted"; break;
-        default: statusText="desconocido";
+      switch(state) {
+        case "E0": red = true; colorClass = "text-danger"; break;
+        case "E1": green = true; colorClass = "text-success"; break;
+        case "E2": yellow = true; colorClass = "text-warning"; break;
+        case "Mantenimiento On": red = yellow = green = true; colorClass = "text-muted"; break;
+        case "Mantenimiento Off": red = yellow = green = false; colorClass = "text-muted"; break;
+        case "apagado": statusText = "apagado"; colorClass = "text-muted"; break;
+        default: statusText = "desconocido";
       }
 
       redBulb.classList.toggle("on", red);
@@ -108,39 +119,62 @@
     });
 
     socket.on("arduino-message", (msg) => {
+      console.log('Recibido arduino-message:', msg); // Debug
       const li = document.createElement("li");
       li.textContent = msg;
       log.appendChild(li);
       log.scrollTop = log.scrollHeight;
     });
 
-
-    //---------------------------------------------------------------------------------------------------------
     async function startVideo() {
-      const pc = new RTCPeerConnection();
-      pc.addTransceiver("video", { direction: "recvonly" });
-      pc.addTransceiver("audio", { direction: "recvonly" });
+      try {
+        const pc = new RTCPeerConnection();
+        pc.addTransceiver("video", { direction: "recvonly" });
+        pc.addTransceiver("audio", { direction: "recvonly" });
 
-      const videoEl = document.getElementById("player");
-      pc.ontrack = (event) => {
-        videoEl.srcObject = event.streams[0];
-      };
+        const videoEl = document.getElementById("player");
+        pc.ontrack = (event) => {
+          console.log('WebRTC track recibido'); // Debug
+          videoEl.srcObject = event.streams[0];
+        };
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
 
-      const resp = await fetch("/whep", {
-        method: "POST",
-        headers: { "Content-Type": "application/sdp" },
-        body: offer.sdp
-      });
+        const resp = await fetch("/whep", {
+          method: "POST",
+          headers: { "Content-Type": "application/sdp" },
+          body: offer.sdp
+        });
 
-      const answerSdp = await resp.text();
-      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+        if (!resp.ok) {
+          throw new Error(`Error en /whep: ${resp.status}`);
+        }
+
+        const answerSdp = await resp.text();
+        await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+      } catch (err) {
+        console.error('Error en WebRTC:', err);
+      }
     }
 
-    startVideo().catch(console.error);
-  </script>
+    startVideo();
 
+    // Manejo de usuario autenticado
+    socket.on("user-info", (user) => {
+      console.log('Recibido user-info:', user); // Debug
+      if (user) {
+        const welcome = document.getElementById("welcome");
+        welcome.textContent = `Usuario: ${user.name || user.email || user.sub}`;
+      }
+    });
+
+    // Botón de logout
+    const logoutBtn = document.getElementById("logoutBtn");
+    logoutBtn.addEventListener("click", () => {
+      console.log('Clic en Cerrar sesión'); // Debug
+      window.location.href = "/logout";
+    });
+  </script>
 </body>
 </html>

@@ -1,0 +1,21 @@
+version: '3.8' 
+services:
+  scada-template:
+    container_name: "scada-template"
+    image: "node:22.18.0"
+    working_dir: "/home/node/app"
+    environment:
+      - APP_NAME=scada-template-app
+      - APP_VERSION=1.0.0
+      - ENVIRONMENT=TEST
+      - NODE_ENV=development
+      - OID_WELLKNOW=${OID_WELLKNOW}
+      - OID_CLIENT_ID=${OID_CLIENT_ID}
+      - OID_CLIENT_SECRET=${OID_CLIENT_SECRET}
+      - OID_REDIRECT_URIS=${OID_REDIRECT_URIS}
+    ports:
+      - "3000:3000"
+    volumes:
+      - "C:/Users/Juan/scada-template/backend:/home/node/app"
+      - "C:/Users/Juan/scada-template/frontend:/home/node/frontend"
+    command: sh -c "if [ ! -d /home/node/app/node_modules ] || [ -z \"$(ls -A node_modules)\" ]; then echo 'Instalando dependencias...'; npm install; else echo 'Dependencias ya instaladas'; fi && npm run dev"
