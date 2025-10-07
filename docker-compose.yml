@@ -1,4 +1,3 @@
-version: '3.8' 
 services:
   scada-template:
     container_name: "scada-template"

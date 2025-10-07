@@ -16,8 +16,8 @@ Start-Process -FilePath ".\ffmpeg\bin\ffmpeg.exe" -ArgumentList $ffmpegArgs -NoN
 Start-Sleep -Seconds 2
 
 # 3️⃣ Abrir navegador automáticamente
-Write-Host "Abriendo navegador en http://localhost:3001..."
-Start-Process "http://localhost:3001"
+Write-Host "Abriendo navegador en http://localhost:3000..."
+Start-Process "http://localhost:3000"
 Start-Sleep -Seconds 2
 
 # 4️⃣ Iniciar MQTT Bridge en otra ventana

@@ -1,79 +1,107 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>SCADA Semáforo 2025</title>
+  <meta charset="UTF-8" />
+  <title>Introducción a los sistemas de control 2025</title>
   <!-- Bootstrap 5 -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css">
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="assets/style.css" />
 </head>
-<body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-light bg-light fixed-top">
-    <div class="container-fluid">
-      <button id="logoutBtn" class="btn btn-outline-danger btn-sm">Cerrar sesión</button>
-      <span id="welcome" class="navbar-text ms-auto"></span>
-    </div>
-  </nav>
 
-  <!-- Header -->
-  <header class="text-center py-4 mt-5">
-    <h1 class="fw-bold text-dark">SCADA Semáforo + Cámara en vivo</h1>
-    <p class="text-muted">Introducción a los Sistemas de Control 2025</p>
+<body class="d-flex flex-column align-items-center p-5 bg-light">
+
+  <!-- Encabezado -->
+  <header class="mb-5 text-center">
+    <h1 class="fw-bold text-dark">Introducción a los sistemas de control 2025</h1>
+    <p class="text-muted">SCADA Semáforo</p>
   </header>
 
-  <main class="container">
-    <!-- Fila con los tres paneles -->
-    <div class="row g-4">
-      <!-- Panel de Control del Semáforo -->
-      <div class="col-lg-4 col-md-6">
-        <div class="card p-4 text-center h-100 panel">
-          <h4 class="mb-3 text-secondary">SEMÁFORO - Activar/Apagar</h4>
-          <div class="d-flex justify-content-center gap-3 mb-3">
-            <button id="activar" class="btn btn-success px-3 py-2">Activar</button>
-            <button id="apagar" class="btn btn-danger px-3 py-2">Apagar</button>
-          </div>
-          <p id="mantenimiento-status" class="fw-semibold fs-5 text-secondary">• Estado: E0</p>
-        </div>
-      </div>
+  <!-- Contenedor principal -->
+  <div class="d-flex flex-wrap justify-content-between w-75 mx-auto">
 
-      <!-- Panel Estado del Semáforo -->
-      <div class="col-lg-4 col-md-6">
-        <div class="card p-4 text-center h-100 panel">
-          <h4 class="mb-3 text-secondary">Estado del Semáforo</h4>
-          <div id="traffic-light" class="traffic-light">
-            <div id="red" class="bulb red"></div>
-            <div id="yellow" class="bulb yellow"></div>
-            <div id="green" class="bulb green"></div>
-          </div>
-          <p id="semaforo-status" class="fw-semibold fs-5 text-secondary">Estado: E0</p>
-        </div>
-      </div>
-
-      <!-- Panel Cámara -->
-      <div class="col-lg-4 col-md-12">
-        <div class="card p-4 text-center h-100 panel">
-          <h4 class="mb-3 text-secondary">Cámara en vivo</h4>
-          <video id="player" autoplay playsinline controls class="w-100" style="max-height: 280px; border-radius: 10px;"></video>
-        </div>
-      </div>
+    <!-- Panel de Stream -->
+    <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
+      <h2 class="mb-3 text-secondary">Stream desde MediaMTX (pasando por Node)</h2>
+      <video id="player" autoplay playsinline controls style="width:100%;border:1px solid #333;"></video>
     </div>
 
-    <!-- Panel Log -->
-    <div class="row mt-4">
-      <div class="col-12">
-        <div class="card p-3 panel">
-          <h5 class="mb-2 text-secondary">Mensajes desde MCU:</h5>
-          <ul id="mcu-log" class="mb-0"></ul>
-        </div>
-      </div>
-    </div>
-  </main>
+    <!-- Panel del Semáforo -->
+    <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
+      <h2 class="mb-4 text-secondary">Semáforo Activar/Apagar (Mantenimiento)</h2>
 
-  <!-- Scripts -->
+      <!-- Botones -->
+      <div class="d-flex justify-content-around mb-4">
+        <button id="activar" class="btn btn-success px-4">Activar</button>
+        <button id="apagar" class="btn btn-danger px-4">Apagar</button>
+      </div>
+
+      <p id="mantenimiento-status" class="fw-semibold fs-5 text-secondary mb-4">• Estado: E0</p>
+
+      <!-- Estado gráfico -->
+      <div id="traffic-light" class="traffic-light mb-3 d-flex flex-column align-items-center">
+        <div id="red" class="bulb red"></div>
+        <div id="yellow" class="bulb yellow"></div>
+        <div id="green" class="bulb green"></div>
+      </div>
+
+      <!-- Estado textual -->
+      <p id="semaforo-status" class="fw-semibold fs-5 text-secondary">Estado: E0</p>
+    </div>
+
+    <!-- Panel LCD -->
+    <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
+      <h2 class="mb-4 text-secondary">Control de LCD</h2>
+      <div class="d-flex justify-content-around mb-4">
+        <input
+          type="text"
+          id="lcdInput"
+          class="form-control"
+          placeholder="Mensaje (máx 32 chars)"
+          maxlength="32"
+        />
+        <button id="sendLcd" class="btn btn-primary px-4 ms-2">Enviar</button>
+      </div>
+      <p id="lcd-status" class="fw-semibold fs-5 text-secondary">Estado: Desconectado</p>
+    </div>
+
+    <!-- Panel LEDs WS2812 -->
+    <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
+      <h2 class="mb-4 text-secondary">Control de LEDs WS2812</h2>
+      <div class="d-flex justify-content-around mb-4">
+        <select id="wsColor" class="form-select">
+          <option value="verde">Verde</option>
+          <option value="rojo">Rojo</option>
+          <option value="azul">Azul</option>
+          <option value="naranja">Naranja</option>
+          <option value="amarillo">Amarillo</option>
+          <option value="celeste">Celeste</option>
+          <option value="violeta">Violeta</option>
+          <option value="rosa">Rosado</option>
+          <option value="blanco">Blanco</option>
+          <option value="magenta">Magenta</option>
+        </select>
+        <button id="sendWs" class="btn btn-primary px-4 ms-2">Enviar</button>
+      </div>
+      <p id="ws-status" class="fw-semibold fs-5 text-secondary">Estado: Desconectado</p>
+    </div>
+  </div>
+
+  <!-- Panel de mensajes desde MCU -->
+  <div class="card shadow-sm p-3 rounded-4 mt-4 bg-light text-dark w-75 mx-auto">
+    <h5>Mensajes desde MCU:</h5>
+    <ul id="mcu-log"></ul>
+  </div>
+
+  <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
+
   <script>
     const socket = io();
+
+    // Elementos del semáforo
     const activarBtn = document.getElementById("activar");
     const apagarBtn = document.getElementById("apagar");
     const mantenimientoStatus = document.getElementById("mantenimiento-status");
@@ -83,22 +111,26 @@
     const greenBulb = document.getElementById("green");
     const log = document.getElementById("mcu-log");
 
-    activarBtn.addEventListener("click", () => {
-      console.log('Clic en Activar'); // Debug
-      socket.emit("activar");
-    });
-    apagarBtn.addEventListener("click", () => {
-      console.log('Clic en Apagar'); // Debug
-      socket.emit("apagar");
-    });
+    // LCD
+    const lcdInput = document.getElementById("lcdInput");
+    const sendLcdBtn = document.getElementById("sendLcd");
+    const lcdStatus = document.getElementById("lcd-status");
+
+    // LEDs WS2812
+    const wsColor = document.getElementById("wsColor");
+    const sendWsBtn = document.getElementById("sendWs");
+    const wsStatus = document.getElementById("ws-status");
+
+    // --- SEMÁFORO ---
+    activarBtn.addEventListener("click", () => socket.emit("activar"));
+    apagarBtn.addEventListener("click", () => socket.emit("apagar"));
 
     socket.on("semaforo-status", (state) => {
-      console.log('Recibido semaforo-status:', state); // Debug
       let red = false, yellow = false, green = false;
       let statusText = state.replace(/On|Off/g, '').trim();
       let colorClass = "text-secondary";
 
-      switch(state) {
+      switch (state) {
         case "E0": red = true; colorClass = "text-danger"; break;
         case "E1": green = true; colorClass = "text-success"; break;
         case "E2": yellow = true; colorClass = "text-warning"; break;
@@ -118,63 +150,80 @@
       semaforoStatus.className = `fw-semibold fs-5 ${colorClass}`;
     });
 
+    // --- LCD ---
+    sendLcdBtn.addEventListener("click", () => {
+      const msg = lcdInput.value.trim();
+      if (msg) {
+        socket.emit("lcd-message", { topic: "semaforo1/lcd", payload: msg });
+        lcdInput.value = "";
+        lcdStatus.textContent = "Estado: Enviando...";
+      } else {
+        lcdStatus.textContent = "Estado: Escribe un mensaje";
+      }
+    });
+
+    socket.on("lcd-response", (response) => {
+      lcdStatus.textContent = `Estado: ${response}`;
+    });
+
+    // --- LEDs WS2812 ---
+    sendWsBtn.addEventListener("click", () => {
+      const color = wsColor.value;
+      socket.emit("ws-message", { topic: "semaforo1/ws", payload: color });
+      wsStatus.textContent = "Estado: Enviando...";
+    });
+
+    socket.on("ws-response", (response) => {
+      wsStatus.textContent = `Estado: ${response}`;
+    });
+
+    // --- Mensajes MCU ---
     socket.on("arduino-message", (msg) => {
-      console.log('Recibido arduino-message:', msg); // Debug
       const li = document.createElement("li");
       li.textContent = msg;
       log.appendChild(li);
       log.scrollTop = log.scrollHeight;
     });
 
-    async function startVideo() {
-      try {
-        const pc = new RTCPeerConnection();
-        pc.addTransceiver("video", { direction: "recvonly" });
-        pc.addTransceiver("audio", { direction: "recvonly" });
-
-        const videoEl = document.getElementById("player");
-        pc.ontrack = (event) => {
-          console.log('WebRTC track recibido'); // Debug
-          videoEl.srcObject = event.streams[0];
-        };
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        const resp = await fetch("/whep", {
-          method: "POST",
-          headers: { "Content-Type": "application/sdp" },
-          body: offer.sdp
-        });
-
-        if (!resp.ok) {
-          throw new Error(`Error en /whep: ${resp.status}`);
-        }
-
-        const answerSdp = await resp.text();
-        await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
-      } catch (err) {
-        console.error('Error en WebRTC:', err);
-      }
-    }
-
-    startVideo();
-
-    // Manejo de usuario autenticado
-    socket.on("user-info", (user) => {
-      console.log('Recibido user-info:', user); // Debug
-      if (user) {
-        const welcome = document.getElementById("welcome");
-        welcome.textContent = `Usuario: ${user.name || user.email || user.sub}`;
-      }
+    // --- Estado de conexión ---
+    socket.on("connect", () => {
+      lcdStatus.textContent = "Estado: Conectado";
+      wsStatus.textContent = "Estado: Conectado";
     });
-
-    // Botón de logout
-    const logoutBtn = document.getElementById("logoutBtn");
-    logoutBtn.addEventListener("click", () => {
-      console.log('Clic en Cerrar sesión'); // Debug
-      window.location.href = "/logout";
+    socket.on("disconnect", () => {
+      lcdStatus.textContent = "Estado: Desconectado";
+      wsStatus.textContent = "Estado: Desconectado";
     });
   </script>
+
+  <!-- WebRTC Player -->
+  <script>
+    async function start() {
+      const pc = new RTCPeerConnection();
+      pc.addTransceiver("video", { direction: "recvonly" });
+      pc.addTransceiver("audio", { direction: "recvonly" });
+
+      const videoEl = document.getElementById("player");
+      pc.ontrack = (event) => {
+        videoEl.srcObject = event.streams[0];
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const resp = await fetch("/whep", {
+        method: "POST",
+        headers: { "Content-Type": "application/sdp" },
+        body: offer.sdp,
+      });
+
+      const answerSdp = await resp.text();
+      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+      console.log("✅ Conexión WebRTC establecida");
+    }
+
+    start().catch(console.error);
+  </script>
+
 </body>
 </html>
