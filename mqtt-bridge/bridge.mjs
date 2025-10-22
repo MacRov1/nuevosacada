@@ -1,7 +1,13 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve('../.env') });
+
 import { SerialPort } from 'serialport';
 import { ReadlineParser } from '@serialport/parser-readline';
 import mqtt from 'mqtt';
 
+/*
 // Configuración (local)
 const SERIAL_PORT = 'COM2'; // Puerto virtual de SimulIDE o hardware real
 const SERIAL_BAUDRATE = 9600; // Ajustar según tu Arduino
@@ -12,6 +18,17 @@ const MQTT_TOPIC_STATUS = 'bridge/status'; // Estado del bridge
 
 const MQTT_TOPIC_LCD = 'semaforo1/lcd'; // Tópico para LCD
 const MQTT_TOPIC_WS = 'semaforo1/ws';   // Nuevo tópico para LEDs WS2812
+*/
+// Configuración desde variables de entorno
+const SERIAL_PORT = process.env.SERIAL_PORT;
+const SERIAL_BAUDRATE = parseInt(process.env.SERIAL_BAUDRATE, 10);
+const MQTT_BROKER = process.env.MQTT_BROKER;
+const MQTT_TOPIC_IN = process.env.MQTT_TOPIC_IN;
+const MQTT_TOPIC_OUT = process.env.MQTT_TOPIC_OUT;
+const MQTT_TOPIC_STATUS = process.env.MQTT_TOPIC_STATUS;
+const MQTT_TOPIC_LCD = process.env.MQTT_TOPIC_LCD;
+const MQTT_TOPIC_WS = process.env.MQTT_TOPIC_WS;
+const MQTT_TOPIC_UMBRAL = process.env.MQTT_TOPIC_UMBRAL; //Nuevo Semana 12
 
 let lastMessageTime = null;
 let isConnected = false;
@@ -21,7 +38,7 @@ let isConnected = false;
 const port = new SerialPort({ path: SERIAL_PORT, baudRate: SERIAL_BAUDRATE });
 const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
 
-port.on('open', () => console.log('✅ Conectado al puerto serial'));
+port.on('open', () => console.log(`✅ Conectado al puerto serial ${SERIAL_PORT}`));
 port.on('error', (err) => console.error('❌ Error serial:', err));
 
 // ---------------------------------------------------------------------------
@@ -29,15 +46,15 @@ port.on('error', (err) => console.error('❌ Error serial:', err));
 const client = mqtt.connect(MQTT_BROKER);
 
 client.on('connect', () => {
-  console.log('✅ Conectado a MQTT');
+  console.log(`✅ Conectado a MQTT (${MQTT_BROKER})`);
   isConnected = true;
 
   //Suscribirse a todos los tópicos necesarios
-  client.subscribe([MQTT_TOPIC_IN, MQTT_TOPIC_LCD, MQTT_TOPIC_WS], (err) => {
-    if (!err) {
-      console.log(`Suscrito a: ${MQTT_TOPIC_IN}, ${MQTT_TOPIC_LCD} y ${MQTT_TOPIC_WS}`);
-    }
-  });
+  client.subscribe([MQTT_TOPIC_IN, MQTT_TOPIC_LCD, MQTT_TOPIC_WS, MQTT_TOPIC_UMBRAL], (err) => {
+  if (!err) {
+    console.log(`Suscrito a: ${MQTT_TOPIC_IN}, ${MQTT_TOPIC_LCD}, ${MQTT_TOPIC_WS}, ${MQTT_TOPIC_UMBRAL}`);
+  }
+});
 
   publishStatus();
 });
@@ -65,6 +82,12 @@ client.on('message', (topic, message) => {
     console.log(`MQTT recibido (WS2812): ${msg}`);
     port.write('ws:' + msg + '\n'); // Prefijo para identificar en Arduino
   }
+  //------------------------------ SEMANA 12 -----------------------------------------------
+  else if (topic === MQTT_TOPIC_UMBRAL) {
+  console.log(`MQTT recibido (Umbral): ${msg}`);
+  port.write('umbral:' + msg + '\n'); // Prefijo para Arduino
+  // --------------------------------------------------------------------------------
+}
 
   lastMessageTime = new Date().toISOString();
   publishStatus();

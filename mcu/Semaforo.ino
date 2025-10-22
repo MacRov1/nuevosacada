@@ -1,3 +1,8 @@
+//--------------------------------------------------------------------
+//Nuevo Semana 12
+#include <DallasTemperature.h>
+#include <OneWire.h>                   
+//--------------------------------------------------------------------
 #include <Adafruit_NeoPixel.h> //Nuevo para los leds
 #include <LiquidCrystal_AIP31068_I2C.h>
 
@@ -8,7 +13,14 @@ const int pulsador = 2;    // Pin para el pulsador
 
 //Pines para WS2812
 const int WS_PIN =10;   //Pin de datos para WS2812
-const int NUM_LEDS =2;    
+const int NUM_LEDS =2;
+
+//-----------------------------------------------------------------------
+//Nuevo Semana 12
+#define ONE_WIRE_BUS 7
+const int WS2_PIN =5;   //Pin de datos para WS2812 para representar lo de los sensores de temperatura
+const int NUM2_LEDS =3; //Cantidad de led
+//------------------------------------------------------------------------
 
 int estadoAnteriorBoton = HIGH;
 bool modoFuncionando = true;
@@ -24,6 +36,50 @@ int estadoSemaforo = 0;
 bool ledsEncendidos = false;
 
 Adafruit_NeoPixel pixels(NUM_LEDS, WS_PIN, NEO_GRB + NEO_KHZ800); 
+//---------------------------------------------------------------------
+//Nuevo Semana 12
+Adafruit_NeoPixel pixels2(NUM2_LEDS, WS2_PIN, NEO_GRB + NEO_KHZ800); 
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+// Umbrales generales
+// Rango Verde
+float minVerde = 20;
+float maxVerde = 30;
+
+// Rango Naranja (dos sub-rangos)
+float minNaranja1 = 10, maxNaranja1 = 20;
+float minNaranja2 = 30, maxNaranja2 = 40;
+
+// Rango Rojo (dos sub-rangos)
+float minRojo1 = -20, maxRojo1 = 10;
+float minRojo2 = 40, maxRojo2 = 60;
+
+// --- Direcciones ROM de cada sensor ---
+DeviceAddress sensoresROM[3] = {
+  {0x28, 0x5F, 0xA6, 0x51, 0xFC, 0x00, 0x00, 0xDA},
+  {0x28, 0x51, 0xB4, 0x30, 0xFF, 0x00, 0x00, 0xCD},
+  {0x28, 0x62, 0xA2, 0x19, 0xFC, 0x00, 0x00, 0x9E}
+};
+
+// --- Umbrales por sensor: [min, adv, riesgo] ---
+float umbrales[NUM2_LEDS][3] = {
+  {25.0, 35.0, 40.0}, // Sensor 1: Verde 25-35, Ámbar 35-40, Rojo >40 o <25
+  {25.0, 35.0, 40.0}, // Sensor 2
+  {25.0, 35.0, 40.0}  // Sensor 3
+};
+
+// Función que devuelve el color según temperatura y umbrales
+uint32_t colorPorTemperatura(float temp) {
+  if (temp >= minVerde && temp <= maxVerde) return pixels2.Color(0, 255, 0); // Verde
+  else if ((temp >= minNaranja1 && temp <= maxNaranja1) || (temp >= minNaranja2 && temp <= maxNaranja2))
+    return pixels2.Color(255, 165, 0); // Naranja
+  else if ((temp >= minRojo1 && temp <= maxRojo1) || (temp >= minRojo2 && temp <= maxRojo2))
+    return pixels2.Color(255, 0, 0); // Rojo
+  else
+    return pixels2.Color(0, 0, 255); // Azul si está fuera de todos los rangos
+}
+//---------------------------------------------------------------------
 LiquidCrystal_AIP31068_I2C lcd2(0x3E, 16, 2);
 
 // Función para setear color en los 2 LEDs WS2812
@@ -46,11 +102,15 @@ void setup() {
   pixels.begin();
   pixels.show();
   pixels.setBrightness (120);
-  //pixels.setPixelColor (0, pixels.Color(0, 0, 255));
-  //pixels.Color(0, 0, 255);
   pixels.show();
-  
-  
+  //-------------------------------------------------------------------
+  //Nuevo Semana 12
+  pixels2.begin();
+  pixels2.show();
+  pixels2.setBrightness (120);
+  pixels2.show();
+  //-------------------------------------------------------------------
+   
   digitalWrite(ledRojo, HIGH); // Estado inicial E0
   Serial.println("Estado E0");
 }
@@ -120,13 +180,59 @@ void loop() {
       else if (color == "blanco") rgbColor = pixels.Color(255, 255, 255);  // Blanco
       else if (color == "magenta") rgbColor = pixels.Color(255, 0, 255);   // Magenta
       else rgbColor = pixels.Color(0, 0, 0);  // Apagado por default
-      setWSColor(rgbColor);  // Setear color en los 2 LEDs
-    } else {
+      setWSColor(rgbColor);  // Setear color en los 2 LEDs 
+    }
+    //--------------------------------------------------------------------------------------------------
+    //Nuevo Semana 12
+      // --- Ajuste de umbrales individuales ---
+ // --- Comando de actualización de umbrales ---
+  if (command.startsWith("umbral:")) {
+    String datos = command.substring(7); // Quita "umbral:"
+    // Separar cada rango por ";"
+    int start = 0;
+    int end = datos.indexOf(';');
+    while (end != -1) {
+      String rango = datos.substring(start, end);
+      int pos1 = rango.indexOf(',');
+      int pos2 = rango.lastIndexOf(',');
+      if (pos1 != -1 && pos2 != -1) {
+        String nombre = rango.substring(0, pos1);
+        float minVal = rango.substring(pos1 + 1, pos2).toFloat();
+        float maxVal = rango.substring(pos2 + 1).toFloat();
+
+        if (nombre == "verde") { minVerde = minVal; maxVerde = maxVal; }
+        else if (nombre == "naranja1") { minNaranja1 = minVal; maxNaranja1 = maxVal; }
+        else if (nombre == "naranja2") { minNaranja2 = minVal; maxNaranja2 = maxVal; }
+        else if (nombre == "rojo1") { minRojo1 = minVal; maxRojo1 = maxVal; }
+        else if (nombre == "rojo2") { minRojo2 = minVal; maxRojo2 = maxVal; }
+      }
+      start = end + 1;
+      end = datos.indexOf(';', start);
+    }
+    // Último rango (o si solo hay uno)
+    String rango = datos.substring(start);
+    int pos1 = rango.indexOf(',');
+    int pos2 = rango.lastIndexOf(',');
+    if (pos1 != -1 && pos2 != -1) {
+      String nombre = rango.substring(0, pos1);
+      float minVal = rango.substring(pos1 + 1, pos2).toFloat();
+      float maxVal = rango.substring(pos2 + 1).toFloat();
+      if (nombre == "verde") { minVerde = minVal; maxVerde = maxVal; }
+      else if (nombre == "naranja1") { minNaranja1 = minVal; maxNaranja1 = maxVal; }
+      else if (nombre == "naranja2") { minNaranja2 = minVal; maxNaranja2 = maxVal; }
+      else if (nombre == "rojo1") { minRojo1 = minVal; maxRojo1 = maxVal; }
+      else if (nombre == "rojo2") { minRojo2 = minVal; maxRojo2 = maxVal; }
+    }
+
+    Serial.println("Umbrales actualizados correctamente");
+  }
+    //---------------------------------------------------------------------------------------------------
+    else {
       Serial.println("Comando desconocido: " + command);
     }
   }
 
-  if (modoFuncionando) {
+ if (modoFuncionando) {
     unsigned long tiempoActual = millis();
     switch (estadoSemaforo) {
       case 0:
@@ -157,7 +263,16 @@ void loop() {
         }
         break;
     }
-  } else {
+    // --- Lectura de sensores con ROM ---
+    sensors.requestTemperatures();
+    float temps[NUM2_LEDS];
+    for (int i = 0; i < NUM2_LEDS; i++) {
+      temps[i] = sensors.getTempC(sensoresROM[i]);
+      Serial.print("Temp Sensor "); Serial.print(i+1); Serial.print(": "); Serial.println(temps[i]);
+      pixels2.setPixelColor(i, colorPorTemperatura(temps[i]));
+    }
+    pixels2.show();
+  } else { 
     unsigned long tiempoActual = millis();
     if (tiempoActual - tiempoAnteriorMantenimiento >= intervaloMantenimiento) {
       tiempoAnteriorMantenimiento = tiempoActual;
@@ -167,8 +282,9 @@ void loop() {
       digitalWrite(ledRojo, ledsEncendidos);
       if (ledsEncendidos)
         Serial.println("Estado Mantenimiento On");
-      else
+      else {
         Serial.println("Estado Mantenimiento Off");
+      }
     }
   }
-}
+} 

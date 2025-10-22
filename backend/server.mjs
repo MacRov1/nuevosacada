@@ -4,13 +4,16 @@ import { Server } from "socket.io";
 import mqtt from "mqtt";
 import { readFile } from "fs/promises";
 import { fileURLToPath } from "url";
-import path from "path";
+import path from "path";       
 import fetch from "node-fetch";
 import { arduino, processMessage } from "./arduino.mjs";
 import { registerSocketHandlers } from "./socket.mjs";
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve('../.env') }); 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const app = express();
 
@@ -55,12 +58,20 @@ app.post("/whep", async (req, res) => {
   }
 });
 
+/*
 // Configuración MQTT
 const MQTT_BROKER = 'mqtt://localhost';
 const MQTT_TOPIC_IN = 'semaforo/control';
 const MQTT_TOPIC_OUT = 'semaforo/estado';
 const MQTT_TOPIC_STATUS = 'bridge/status';
-//const MQTT_TOPIC_LCD = 'semaforo1/lcd'; // NUEVO TÓPICO PARA EL LCD 
+//const MQTT_TOPIC_LCD = 'semaforo1/lcd'; // NUEVO TÓPICO PARA EL LCD */
+
+const MQTT_BROKER = process.env.MQTT_BROKER;
+const MQTT_TOPIC_IN = process.env.MQTT_TOPIC_IN;
+const MQTT_TOPIC_OUT = process.env.MQTT_TOPIC_OUT;
+const MQTT_TOPIC_STATUS = process.env.MQTT_TOPIC_STATUS;
+const MEDIAMTX_URL = process.env.MEDIAMTX_URL;
+
 
 const mqttClient = mqtt.connect(MQTT_BROKER);
 
@@ -118,7 +129,22 @@ io.on('connection', (socket) => {
       }
     });
   });
+  //-------------------- SEMANA 12 -------------------------------------------
+  // ---------------- UMBRAL DE TEMPERATURA ----------------
+  socket.on('umbral-message', (data) => {
+    console.log('Mensaje Umbral recibido:', data);
+    const { topic, payload } = data;
+    mqttClient.publish(topic, payload, (err) => {
+      if (err) {
+        socket.emit('umbral-response', 'Error al enviar umbral');
+      } else {
+        socket.emit('umbral-response', 'Umbral enviado correctamente');
+      }
+    });
+  });
 });
+//--------------------------------------------------------------------------------------------------
+
 //--------------------------------------------------------------------------------------------------
 
 server.listen(PORT, () => {

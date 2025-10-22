@@ -89,6 +89,44 @@
     </div>
   </div>
 
+  <!------------------------------ SEMANA 12 ----------------------------------------------->
+  <!-- Panel Umbral de Temperatura -->
+<div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3">
+  <h2 class="mb-4 text-secondary">Umbrales de Temperatura</h2>
+
+  <div class="mb-2">
+    <label>Verde Min / Max</label>
+    <input type="number" id="verdeMin" placeholder="min">
+    <input type="number" id="verdeMax" placeholder="max">
+  </div>
+
+  <div class="mb-2">
+    <label>Naranja Rango 1</label>
+    <input type="number" id="naranja1Min" placeholder="min">
+    <input type="number" id="naranja1Max" placeholder="max">
+  </div>
+  <div class="mb-2">
+    <label>Naranja Rango 2</label>
+    <input type="number" id="naranja2Min" placeholder="min">
+    <input type="number" id="naranja2Max" placeholder="max">
+  </div>
+
+  <div class="mb-2">
+    <label>Rojo Rango 1</label>
+    <input type="number" id="rojo1Min" placeholder="min">
+    <input type="number" id="rojo1Max" placeholder="max">
+  </div>
+  <div class="mb-2">
+    <label>Rojo Rango 2</label>
+    <input type="number" id="rojo2Min" placeholder="min">
+    <input type="number" id="rojo2Max" placeholder="max">
+  </div>
+
+  <button id="sendUmbral" class="btn btn-primary">Enviar</button>
+  <p id="umbral-status" class="fw-semibold fs-5 text-secondary">Estado: Desconectado</p>
+</div>
+ <!------------------------------------------------------------------------------------->
+
   <!-- Panel de mensajes desde MCU -->
   <div class="card shadow-sm p-3 rounded-4 mt-4 bg-light text-dark w-75 mx-auto">
     <h5>Mensajes desde MCU:</h5>
@@ -221,6 +259,32 @@
       await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
       console.log("✅ Conexión WebRTC establecida");
     }
+
+  //----------------------------------- SEMANA 12 ------------------------------------------------
+  // --- UMBRAL DE TEMPERATURA ---
+  sendUmbralBtn.addEventListener("click", () => {
+  const verdeMin = document.getElementById("verdeMin").value;
+  const verdeMax = document.getElementById("verdeMax").value;
+  const naranja1Min = document.getElementById("naranja1Min").value;
+  const naranja1Max = document.getElementById("naranja1Max").value;
+  const naranja2Min = document.getElementById("naranja2Min").value;
+  const naranja2Max = document.getElementById("naranja2Max").value;
+  const rojo1Min = document.getElementById("rojo1Min").value;
+  const rojo1Max = document.getElementById("rojo1Max").value;
+  const rojo2Min = document.getElementById("rojo2Min").value;
+  const rojo2Max = document.getElementById("rojo2Max").value;
+
+  const msg = `verde,${verdeMin},${verdeMax};` +
+              `naranja1,${naranja1Min},${naranja1Max};` +
+              `naranja2,${naranja2Min},${naranja2Max};` +
+              `rojo1,${rojo1Min},${rojo1Max};` +
+              `rojo2,${rojo2Min},${rojo2Max}`;
+
+  socket.emit("umbral-message", msg);
+  umbralStatus.textContent = "Estado: Enviando...";
+});
+
+  //-------------------------------------------------------------------------------
 
     start().catch(console.error);
   </script>
