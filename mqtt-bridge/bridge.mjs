@@ -7,18 +7,6 @@ import { SerialPort } from 'serialport';
 import { ReadlineParser } from '@serialport/parser-readline';
 import mqtt from 'mqtt';
 
-/*
-// Configuración (local)
-const SERIAL_PORT = 'COM2'; // Puerto virtual de SimulIDE o hardware real
-const SERIAL_BAUDRATE = 9600; // Ajustar según tu Arduino
-const MQTT_BROKER = 'mqtt://localhost'; // Broker local (Mosquitto)
-const MQTT_TOPIC_IN = 'semaforo/control'; // Comandos al MCU
-const MQTT_TOPIC_OUT = 'semaforo/estado'; // Estados del MCU
-const MQTT_TOPIC_STATUS = 'bridge/status'; // Estado del bridge
-
-const MQTT_TOPIC_LCD = 'semaforo1/lcd'; // Tópico para LCD
-const MQTT_TOPIC_WS = 'semaforo1/ws';   // Nuevo tópico para LEDs WS2812
-*/
 // Configuración desde variables de entorno
 const SERIAL_PORT = process.env.SERIAL_PORT;
 const SERIAL_BAUDRATE = parseInt(process.env.SERIAL_BAUDRATE, 10);
@@ -93,12 +81,19 @@ client.on('message', (topic, message) => {
   publishStatus();
 });
 
-// ---------------------------------------------------------------------------
-// Serial → MQTT
+//----------------------------------------------------------------------------
+//Nuevo bloque para detectar mensajes de umbrales de temperatura (Semana 12)
 parser.on('data', (data) => {
   const trimmed = data.trim();
   console.log(`Serial recibido: ${trimmed}`);
-  client.publish(MQTT_TOPIC_OUT, trimmed);
+
+  // Detectar si es mensaje de umbrales
+  if (trimmed.startsWith("umbrales:")) {
+    client.publish(MQTT_TOPIC_UMBRAL, trimmed.substring(9)); 
+  } else {
+    client.publish(MQTT_TOPIC_OUT, trimmed);
+  }
+
   lastMessageTime = new Date().toISOString();
   publishStatus();
 });

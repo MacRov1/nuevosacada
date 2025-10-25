@@ -4,26 +4,37 @@ import { Server } from "socket.io";
 import mqtt from "mqtt";
 import { readFile } from "fs/promises";
 import { fileURLToPath } from "url";
-import path from "path";       
+import path from "path";
 import fetch from "node-fetch";
 import { arduino, processMessage } from "./arduino.mjs";
 import { registerSocketHandlers } from "./socket.mjs";
 import dotenv from 'dotenv';
 
-dotenv.config({ path: path.resolve('../.env') }); 
+// ------------------- Configuración -------------------
+dotenv.config({ path: path.resolve('../.env') });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 
+// MQTT Topics
+const MQTT_BROKER = process.env.MQTT_BROKER;
+const MQTT_TOPIC_IN = process.env.MQTT_TOPIC_IN;
+const MQTT_TOPIC_OUT = process.env.MQTT_TOPIC_OUT;
+const MQTT_TOPIC_STATUS = process.env.MQTT_TOPIC_STATUS;
+const MQTT_TOPIC_UMBRAL = process.env.MQTT_TOPIC_UMBRAL; // Nuevo Semana 12
+
+const MEDIAMTX_URL = process.env.MEDIAMTX_URL;
+
+// ------------------- Express -------------------
 const app = express();
 
-// Middleware: necesitamos recibir texto crudo (SDP)
+// Middleware para recibir texto crudo (SDP)
 app.use(express.text({ type: "*/*" }));
 
 // Servir frontend estático
 app.use(express.static("../frontend"));
 
-// Servir archivo index.html manualmente
+// Servir index.html manualmente
 app.get("/", async (req, res) => {
   try {
     const html = await readFile(path.join(__dirname, '../frontend/index.html'), 'utf8');
@@ -35,13 +46,13 @@ app.get("/", async (req, res) => {
   }
 });
 
-// Ruta para hacer de proxy entre el navegador y MediaMTX
+// ------------------- Proxy WebRTC MediaMTX -------------------
 app.post("/whep", async (req, res) => {
   try {
     const offerSDP = req.body;
     console.log("Offer SDP recibido del navegador:\n", offerSDP.slice(0, 200));
 
-    const mediamtx = await fetch("http://127.0.0.1:8889/players/mystream/whep", {
+    const mediamtx = await fetch(`${MEDIAMTX_URL}/players/mystream/whep`, {
       method: "POST",
       headers: { "Content-Type": "application/sdp" },
       body: offerSDP,
@@ -58,49 +69,26 @@ app.post("/whep", async (req, res) => {
   }
 });
 
-/*
-// Configuración MQTT
-const MQTT_BROKER = 'mqtt://localhost';
-const MQTT_TOPIC_IN = 'semaforo/control';
-const MQTT_TOPIC_OUT = 'semaforo/estado';
-const MQTT_TOPIC_STATUS = 'bridge/status';
-//const MQTT_TOPIC_LCD = 'semaforo1/lcd'; // NUEVO TÓPICO PARA EL LCD */
-
-const MQTT_BROKER = process.env.MQTT_BROKER;
-const MQTT_TOPIC_IN = process.env.MQTT_TOPIC_IN;
-const MQTT_TOPIC_OUT = process.env.MQTT_TOPIC_OUT;
-const MQTT_TOPIC_STATUS = process.env.MQTT_TOPIC_STATUS;
-const MEDIAMTX_URL = process.env.MEDIAMTX_URL;
-
-
+// ------------------- Conexión MQTT -------------------
 const mqttClient = mqtt.connect(MQTT_BROKER);
 
 mqttClient.on('connect', () => {
   console.log('Backend conectado a MQTT');
-  mqttClient.subscribe([MQTT_TOPIC_OUT, MQTT_TOPIC_STATUS]);
+
+  // Nos suscribimos a todos los topics necesarios
+  mqttClient.subscribe([MQTT_TOPIC_OUT, MQTT_TOPIC_STATUS, MQTT_TOPIC_UMBRAL], (err) => {
+    if (err) console.error('Error suscribiéndose a topics:', err);
+  });
 });
 
-mqttClient.on('message', (topic, message) => {
-  const msg = message.toString();
-  console.log(`MQTT recibido en ${topic}: ${msg}`);
-  if (topic === MQTT_TOPIC_OUT) {
-    processMessage(msg, (cmd) => mqttClient.publish(MQTT_TOPIC_IN, cmd));
-  } else if (topic === MQTT_TOPIC_STATUS) {
-    io.emit('bridge-status', msg);
-  }
-});
-
-// Servidor HTTP unificado con Express
+// ------------------- Servidor HTTP + Socket.IO -------------------
 const server = createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-// Socket.IO server
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
-
+// ------------------- Registro de handlers Socket.IO -------------------
 registerSocketHandlers(io, mqttClient);
 
-//------------------------------- NUEVO PARA LCD -------------------------------------------
+// ------------------- Conexión Socket.IO -------------------
 io.on('connection', (socket) => {
   console.log('Usuario conectado via Socket.IO');
 
@@ -129,24 +117,35 @@ io.on('connection', (socket) => {
       }
     });
   });
-  //-------------------- SEMANA 12 -------------------------------------------
-  // ---------------- UMBRAL DE TEMPERATURA ----------------
-  socket.on('umbral-message', (data) => {
-    console.log('Mensaje Umbral recibido:', data);
-    const { topic, payload } = data;
-    mqttClient.publish(topic, payload, (err) => {
-      if (err) {
-        socket.emit('umbral-response', 'Error al enviar umbral');
-      } else {
-        socket.emit('umbral-response', 'Umbral enviado correctamente');
-      }
-    });
-  });
 });
-//--------------------------------------------------------------------------------------------------
 
-//--------------------------------------------------------------------------------------------------
+// ------------------- Manejo de mensajes MQTT -------------------
+mqttClient.on('message', (topic, message) => {
+  const msg = message.toString();
+  console.log(`MQTT recibido en ${topic}: ${msg}`);
 
+  switch(topic) {
+    case MQTT_TOPIC_OUT:
+      // Procesa mensajes de estado del semáforo
+      processMessage(msg, (cmd) => mqttClient.publish(MQTT_TOPIC_IN, cmd));
+      break;
+
+    case MQTT_TOPIC_STATUS:
+      // Reenvía status del bridge al front
+      io.emit('bridge-status', msg);
+      break;
+
+    case MQTT_TOPIC_UMBRAL:
+      // Reenvía actualización de umbrales al front
+      io.emit('umbrales-update', msg);
+      break;
+
+    default:
+      console.log('Topic desconocido:', topic);
+  }
+});
+
+// ------------------- Inicia servidor -------------------
 server.listen(PORT, () => {
   console.log(`Servidor unificado corriendo en http://localhost:${PORT}`);
 });

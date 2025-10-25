@@ -63,6 +63,17 @@ export function registerSocketHandlers(io, mqttClient) {
       });
     });
 
+    // Umbrales
+      socket.on('umbral-message', (data) => {
+      const { topic, payload } = data;
+
+      mqttClient.publish(topic, payload, { qos: 0, retain: true }, (err) => {
+        if (err) socket.emit('umbral-response', 'Error al enviar umbral');
+        else socket.emit('umbral-response', 'Umbral enviado correctamente');
+      });
+      });
+
+
     socket.on("disconnect", () => console.log("❌ Cliente desconectado"));
   });
 }
