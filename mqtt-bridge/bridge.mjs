@@ -16,7 +16,10 @@ const MQTT_TOPIC_OUT = process.env.MQTT_TOPIC_OUT;
 const MQTT_TOPIC_STATUS = process.env.MQTT_TOPIC_STATUS;
 const MQTT_TOPIC_LCD = process.env.MQTT_TOPIC_LCD;
 const MQTT_TOPIC_WS = process.env.MQTT_TOPIC_WS;
-const MQTT_TOPIC_UMBRAL = process.env.MQTT_TOPIC_UMBRAL; //Nuevo Semana 12
+//const MQTT_TOPIC_UMBRAL = process.env.MQTT_TOPIC_UMBRAL;
+const MQTT_TOPIC_UMBRAL = process.env.MQTT_TOPIC_UMBRAL; // comandos
+const MQTT_TOPIC_UMBRAL_STATUS =
+process.env.MQTT_TOPIC_UMBRAL_STATUS || `${MQTT_TOPIC_UMBRAL}/status`;
 
 let lastMessageTime = null;
 let isConnected = false;
@@ -43,7 +46,6 @@ client.on('connect', () => {
     console.log(`Suscrito a: ${MQTT_TOPIC_IN}, ${MQTT_TOPIC_LCD}, ${MQTT_TOPIC_WS}, ${MQTT_TOPIC_UMBRAL}`);
   }
 });
-
   publishStatus();
 });
 
@@ -88,8 +90,8 @@ parser.on('data', (data) => {
   console.log(`Serial recibido: ${trimmed}`);
 
   // Detectar si es mensaje de umbrales
-  if (trimmed.startsWith("umbrales:")) {
-    client.publish(MQTT_TOPIC_UMBRAL, trimmed.substring(9)); 
+   if (trimmed.startsWith("umbrales:")) {
+    client.publish(MQTT_TOPIC_UMBRAL_STATUS, trimmed.substring(9), { retain: true });
   } else {
     client.publish(MQTT_TOPIC_OUT, trimmed);
   }

@@ -245,7 +245,7 @@
     sendLcdBtn.addEventListener("click", () => {
       const message = lcdInput.value.trim();
       if (message) {
-        socket.emit("lcd-message", { topic: "semaforo/lcd", payload: message });
+        socket.emit("lcd-message", { topic: "equipo1/isc2025/semaforo/lcd", payload: message });
       }
     });
 
@@ -256,7 +256,7 @@
     // -------------------- WS2812 --------------------
     sendWsBtn.addEventListener("click", () => {
       const color = wsColor.value;
-      socket.emit("ws-message", { topic: "semaforo/ws", payload: color });
+      socket.emit("ws-message", { topic: "equipo1/isc2025/semaforo/ws", payload: color });
     });
 
     socket.on("ws-response", (msg) => {

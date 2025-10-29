@@ -7,21 +7,21 @@ export function registerSocketHandlers(io, mqttClient) {
     io.emit("arduino-message", msg); // Mostrar mensaje textual en el log
 
     let newState = null;
-    if (msg.startsWith('Estado ')) {
+    if (msg.startsWith("Estado ")) {
       newState = msg.substring(7).trim(); // Extrae "E0", "E1", "E2", "Mantenimiento"
-    } else if (msg.includes('E0')) {
-      newState = 'E0';
-    } else if (msg.includes('E1')) {
-      newState = 'E1';
-    } else if (msg.includes('E2')) {
-      newState = 'E2';
-    } else if (msg.includes('Mantenimiento')) {
-      newState = 'Mantenimiento';
+    } else if (msg.includes("E0")) {
+      newState = "E0";
+    } else if (msg.includes("E1")) {
+      newState = "E1";
+    } else if (msg.includes("E2")) {
+      newState = "E2";
+    } else if (msg.includes("Mantenimiento")) {
+      newState = "Mantenimiento";
     }
 
     if (newState && newState !== arduino.getState()) {
       arduino.updateState(newState);
-      io.emit('semaforo-status', newState); // Emitir estado del semáforo
+      io.emit("semaforo-status", newState); // Emitir estado del semáforo
     }
   });
 
@@ -31,15 +31,29 @@ export function registerSocketHandlers(io, mqttClient) {
     socket.emit("led-status", arduino.getState());
     socket.emit("semaforo-status", arduino.getState());
 
-    //LED (compatibilidad)
-    socket.on("led-on", () => arduino.turnOn((cmd) => mqttClient.publish('semaforo/control', cmd)));
-    socket.on("led-off", () => arduino.turnOff((cmd) => mqttClient.publish('semaforo/control', cmd)));
+    // LED (compatibilidad)
+    socket.on("led-on", () =>
+      arduino.turnOn((cmd) => mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd))
+    );
+    socket.on("led-off", () =>
+      arduino.turnOff((cmd) => mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd))
+    );
 
-    //Semáforo
-    socket.on("activar", () => arduino.sendCommand((cmd) => mqttClient.publish('semaforo/control', cmd), "activar"));
-    socket.on("apagar", () => arduino.sendCommand((cmd) => mqttClient.publish('semaforo/control', cmd), "apagar"));
+    // Semáforo
+    socket.on("activar", () =>
+      arduino.sendCommand(
+        (cmd) => mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd),
+        "activar"
+      )
+    );
+    socket.on("apagar", () =>
+      arduino.sendCommand(
+        (cmd) => mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd),
+        "apagar"
+      )
+    );
 
-    //LCD
+    // LCD
     socket.on("lcd-message", (data) => {
       const { topic, payload } = data;
       mqttClient.publish(topic, payload, (err) => {
@@ -51,7 +65,7 @@ export function registerSocketHandlers(io, mqttClient) {
       });
     });
 
-    //WS2812
+    // WS2812
     socket.on("ws-message", (data) => {
       const { topic, payload } = data;
       mqttClient.publish(topic, payload, (err) => {
@@ -64,15 +78,14 @@ export function registerSocketHandlers(io, mqttClient) {
     });
 
     // Umbrales
-      socket.on('umbral-message', (data) => {
+    socket.on("umbral-message", (data) => {
       const { topic, payload } = data;
 
-      mqttClient.publish(topic, payload, { qos: 0, retain: true }, (err) => {
-        if (err) socket.emit('umbral-response', 'Error al enviar umbral');
-        else socket.emit('umbral-response', 'Umbral enviado correctamente');
+      mqttClient.publish(topic, payload, { qos: 0, retain: false }, (err) => {
+        if (err) socket.emit("umbral-response", "Error al enviar umbral");
+        else socket.emit("umbral-response", "Umbral enviado correctamente");
       });
-      });
-
+    });
 
     socket.on("disconnect", () => console.log("❌ Cliente desconectado"));
   });

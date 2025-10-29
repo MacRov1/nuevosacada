@@ -100,17 +100,23 @@ void setUmbrales(float normal, float advertencia, float riesgo) {
   UMBRAL_NORMAL = normal;
   UMBRAL_ADVERTENCIA = advertencia;
   UMBRAL_RIESGO = riesgo;
+
   Serial.print("Umbrales actualizados -> Normal: "); Serial.print(UMBRAL_NORMAL);
   Serial.print(" | Advertencia: "); Serial.print(UMBRAL_ADVERTENCIA);
   Serial.print(" | Riesgo: "); Serial.println(UMBRAL_RIESGO);
+
   // Enviar de vuelta al frontend
   Serial.print("umbrales:");
   Serial.print(UMBRAL_NORMAL); Serial.print(",");
   Serial.print(UMBRAL_ADVERTENCIA); Serial.print(",");
   Serial.println(UMBRAL_RIESGO);
+
   // Fuerza actualización de LEDs inmediatamente
-  leerTemperaturas(); // Llama a leer y actualizar LEDs con nuevos umbrales
+  leerTemperaturas();
+
+  Serial.println("Estado: Umbrales actualizados");
 }
+
 //----------------------------------------------------------------
 void setup() {
   pinMode(ledVerde, OUTPUT);
@@ -223,6 +229,7 @@ void loop() {
         float a = valores.substring(index1 + 1, index2).toFloat();
         float r = valores.substring(index2 + 1).toFloat();
         setUmbrales(n, a, r);
+        Serial.println("Estado: Umbrales actualizados");
       }
     } else {
       Serial.println("Comando desconocido: " + command);
