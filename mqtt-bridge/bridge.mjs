@@ -17,9 +17,9 @@ const MQTT_TOPIC_STATUS = process.env.MQTT_TOPIC_STATUS;
 const MQTT_TOPIC_LCD = process.env.MQTT_TOPIC_LCD;
 const MQTT_TOPIC_WS = process.env.MQTT_TOPIC_WS;
 //const MQTT_TOPIC_UMBRAL = process.env.MQTT_TOPIC_UMBRAL;
-const MQTT_TOPIC_UMBRAL = process.env.MQTT_TOPIC_UMBRAL; // comandos
-const MQTT_TOPIC_UMBRAL_STATUS =
-process.env.MQTT_TOPIC_UMBRAL_STATUS || `${MQTT_TOPIC_UMBRAL}/status`;
+const MQTT_TOPIC_UMBRAL = process.env.MQTT_TOPIC_UMBRAL; // NUEVO SEMANA 12
+const MQTT_TOPIC_UMBRAL_STATUS =  // NUEVO SEMANA 12
+process.env.MQTT_TOPIC_UMBRAL_STATUS || `${MQTT_TOPIC_UMBRAL}/status`;  // NUEVO SEMANA 12
 
 let lastMessageTime = null;
 let isConnected = false;
@@ -40,7 +40,8 @@ client.on('connect', () => {
   console.log(`✅ Conectado a MQTT (${MQTT_BROKER})`);
   isConnected = true;
 
-  //Suscribirse a todos los tópicos necesarios
+  //Suscribirse a todos los tópicos necesarios 
+   // NUEVO SEMANA 12 EL TOPIC DE UMBRALES
   client.subscribe([MQTT_TOPIC_IN, MQTT_TOPIC_LCD, MQTT_TOPIC_WS, MQTT_TOPIC_UMBRAL], (err) => {
   if (!err) {
     console.log(`Suscrito a: ${MQTT_TOPIC_IN}, ${MQTT_TOPIC_LCD}, ${MQTT_TOPIC_WS}, ${MQTT_TOPIC_UMBRAL}`);
@@ -72,16 +73,19 @@ client.on('message', (topic, message) => {
     console.log(`MQTT recibido (WS2812): ${msg}`);
     port.write('ws:' + msg + '\n'); // Prefijo para identificar en Arduino
   }
-  //------------------------------ SEMANA 12 -----------------------------------------------
+  //******************************************************************************************* */
+  //------------------------------  NUEVO SEMANA 12 -----------------------------------------------
   else if (topic === MQTT_TOPIC_UMBRAL) {
   console.log(`MQTT recibido (Umbral): ${msg}`);
   port.write('umbral:' + msg + '\n'); // Prefijo para Arduino
   // --------------------------------------------------------------------------------
+  //************************************************************************************************ */
 }
 
   lastMessageTime = new Date().toISOString();
   publishStatus();
 });
+
 
 //----------------------------------------------------------------------------
 //Nuevo bloque para detectar mensajes de umbrales de temperatura (Semana 12)
@@ -89,17 +93,18 @@ parser.on('data', (data) => {
   const trimmed = data.trim();
   console.log(`Serial recibido: ${trimmed}`);
 
-  // Detectar si es mensaje de umbrales
+  //****************************************************************************************** */
+  // Detectar si es mensaje de umbrales  // NUEVO SEMANA 12
    if (trimmed.startsWith("umbrales:")) {
     client.publish(MQTT_TOPIC_UMBRAL_STATUS, trimmed.substring(9), { retain: true });
   } else {
     client.publish(MQTT_TOPIC_OUT, trimmed);
   }
+  //****************************************************************************************** */
 
   lastMessageTime = new Date().toISOString();
   publishStatus();
 });
-
 // ---------------------------------------------------------------------------
 // Publicar estado del bridge (cada 5 segundos)
 function publishStatus() {
@@ -112,3 +117,5 @@ function publishStatus() {
 }
 
 setInterval(publishStatus, 5000); // Cada 5 segundos
+
+

@@ -32,7 +32,7 @@ const MQTT_TOPIC_IN = process.env.MQTT_TOPIC_IN;
 const MQTT_TOPIC_OUT = process.env.MQTT_TOPIC_OUT;
 const MQTT_TOPIC_STATUS = process.env.MQTT_TOPIC_STATUS;
 const MQTT_TOPIC_UMBRAL = process.env.MQTT_TOPIC_UMBRAL;
-const MQTT_TOPIC_UMBRAL_STATUS = process.env.MQTT_TOPIC_UMBRAL_STATUS || `${MQTT_TOPIC_UMBRAL}/status`;
+const MQTT_TOPIC_UMBRAL_STATUS = process.env.MQTT_TOPIC_UMBRAL_STATUS || `${MQTT_TOPIC_UMBRAL}/status`; //NUEVO SEMANA 12
 
 const MEDIAMTX_URL = process.env.MEDIAMTX_URL;
 
@@ -81,6 +81,7 @@ const mqttClient = mqtt.connect(MQTT_BROKER);
 mqttClient.on('connect', () => {
   console.log('Backend conectado a MQTT');
 
+  //ACA LO NUEVO ES QUE SE SUSCRIBE TAMBIEN AL TOPIC DE UMBRALES SEMANA 12
   mqttClient.subscribe([MQTT_TOPIC_OUT, MQTT_TOPIC_STATUS, MQTT_TOPIC_UMBRAL_STATUS], (err) => {
     if (err) console.error('Error suscribiéndose a topics:', err);
   });
@@ -107,8 +108,8 @@ mqttClient.on('message', (topic, message) => {
       io.emit('bridge-status', msg);
       break;
 
-    case MQTT_TOPIC_UMBRAL_STATUS:
-      io.emit('umbrales-update', msg);
+    case MQTT_TOPIC_UMBRAL_STATUS: // NUEVO SEMANA 12
+      io.emit('umbrales-update', msg); //NUEVO SEMANA 12
       break;
 
     default:

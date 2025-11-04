@@ -89,6 +89,8 @@
     </div>
   </div>
 
+  <!-- **************************************************************************************** -->
+  <!-- SEMANA 12  -->
   <!-- Panel de Umbrales -->
   <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
     <h2 class="mb-4 text-secondary">Umbrales de Temperatura</h2>
@@ -110,6 +112,7 @@
 
     <p id="umbral-status" class="fw-semibold fs-5 text-secondary">Estado: No actualizado</p>
   </div>
+   <!-- **************************************************************************************** -->
 
   <!-- Panel de mensajes desde MCU -->
   <div class="card shadow-sm p-3 rounded-4 mt-4 bg-light text-dark w-75 mx-auto">
@@ -143,6 +146,8 @@
     const sendWsBtn = document.getElementById("sendWs");
     const wsStatus = document.getElementById("ws-status");
 
+    //**********************************************************************************************
+    //SEMANA 12
     // -------------------- Umbrales --------------------
     const umbralNormalInput = document.getElementById("umbralNormal");
     const umbralAdvertenciaInput = document.getElementById("umbralAdvertencia");
@@ -161,7 +166,7 @@
 
     // -------------------- Eventos de socket --------------------
     socket.on('umbrales-update', (msg) => {
-      console.log('Recibido umbrales-update:', msg); // DEPURACIÓN: ver en F12 > Console
+      console.log('Recibido umbrales-update:', msg); 
       const [normal, advertencia, riesgo] = msg.split(',').map(Number);
 
       // FILTRO: actualizar solo si cambió algún valor
@@ -202,11 +207,11 @@
       const advertencia = parseFloat(umbralAdvertenciaInput.value);
       const riesgo = parseFloat(umbralRiesgoInput.value);
 
-      console.log('Click en Actualizar - Valores:', normal, advertencia, riesgo); // DEPURACIÓN
+      console.log('Click en Actualizar - Valores:', normal, advertencia, riesgo); 
 
       if (!isNaN(normal) && !isNaN(advertencia) && !isNaN(riesgo)) {
         const payload = `${normal},${advertencia},${riesgo}`;
-        console.log('Enviando umbral-message:', { topic: "equipo1/isc2025/umbral", payload }); // DEPURACIÓN
+        console.log('Enviando umbral-message:', { topic: "equipo1/isc2025/umbral", payload }); 
         // Emitir con topic correcto para el bridge
         socket.emit("umbral-message", { 
           topic: "equipo1/isc2025/umbral", 
@@ -217,6 +222,7 @@
         umbralStatus.textContent = "Estado: Ingresa valores válidos";
       }
     });
+    //**********************************************************************************************
 
     // -------------------- Semáforo --------------------
     activarBtn.addEventListener("click", () => socket.emit("activar"));

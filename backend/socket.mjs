@@ -77,6 +77,8 @@ export function registerSocketHandlers(io, mqttClient) {
       });
     });
 
+    //******************************************************************************
+    // NUEVO SEMANA 12 */
     // Umbrales
     socket.on("umbral-message", (data) => {
       const { topic, payload } = data;
@@ -86,7 +88,8 @@ export function registerSocketHandlers(io, mqttClient) {
         else socket.emit("umbral-response", "Umbral enviado correctamente");
       });
     });
-
+    //****************************************************************************************** */
+    
     socket.on("disconnect", () => console.log("❌ Cliente desconectado"));
   });
 }
