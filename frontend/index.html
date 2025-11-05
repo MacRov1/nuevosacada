@@ -4,15 +4,10 @@
   <meta charset="UTF-8" />
   <title>Introducción a los sistemas de control 2025</title>
   <!-- Bootstrap 5 -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
-
 <body class="d-flex flex-column align-items-center p-5 bg-light">
-
   <!-- Encabezado -->
   <header class="mb-5 text-center">
     <h1 class="fw-bold text-dark">Introducción a los sistemas de control 2025</h1>
@@ -31,23 +26,16 @@
     <!-- Panel del Semáforo -->
     <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
       <h2 class="mb-4 text-secondary">Semáforo Activar/Apagar (Mantenimiento)</h2>
-
-      <!-- Botones -->
       <div class="d-flex justify-content-around mb-4">
         <button id="activar" class="btn btn-success px-4">Activar</button>
         <button id="apagar" class="btn btn-danger px-4">Apagar</button>
       </div>
-
-      <p id="mantenimiento-status" class="fw-semibold fs-5 text-secondary mb-4">• Estado: E0</p>
-
-      <!-- Estado gráfico -->
+      <p id="mantenimiento-status" class="fw-semibold fs-5 text-secondary">• Estado: E0</p>
       <div id="traffic-light" class="traffic-light mb-3 d-flex flex-column align-items-center">
         <div id="red" class="bulb red"></div>
         <div id="yellow" class="bulb yellow"></div>
         <div id="green" class="bulb green"></div>
       </div>
-
-      <!-- Estado textual -->
       <p id="semaforo-status" class="fw-semibold fs-5 text-secondary">Estado: E0</p>
     </div>
 
@@ -55,13 +43,7 @@
     <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
       <h2 class="mb-4 text-secondary">Control de LCD</h2>
       <div class="d-flex justify-content-around mb-4">
-        <input
-          type="text"
-          id="lcdInput"
-          class="form-control"
-          placeholder="Mensaje (máx 32 chars)"
-          maxlength="32"
-        />
+        <input type="text" id="lcdInput" class="form-control" placeholder="Mensaje (máx 32 chars)" maxlength="32" />
         <button id="sendLcd" class="btn btn-primary px-4 ms-2">Enviar</button>
       </div>
       <p id="lcd-status" class="fw-semibold fs-5 text-secondary">Estado: Desconectado</p>
@@ -87,32 +69,49 @@
       </div>
       <p id="ws-status" class="fw-semibold fs-5 text-secondary">Estado: Desconectado</p>
     </div>
-  </div>
 
-  <!-- **************************************************************************************** -->
-  <!-- SEMANA 12  -->
-  <!-- Panel de Umbrales -->
-  <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
-    <h2 class="mb-4 text-secondary">Umbrales de Temperatura</h2>
+    <!-- Panel Motor DC (Puente H con L293D) -->
+    <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
+      <h2 class="mb-4 text-secondary">Motor DC - Puente H (L293D)</h2>
 
-    <!-- Inputs para actualizar -->
-    <div class="d-flex justify-content-around mb-3">
-      <input type="number" id="umbralNormal" class="form-control" placeholder="Normal (°C)" />
-      <input type="number" id="umbralAdvertencia" class="form-control" placeholder="Advertencia (°C)" />
-      <input type="number" id="umbralRiesgo" class="form-control" placeholder="Riesgo (°C)" />
-      <button id="sendUmbrales" class="btn btn-primary px-3 ms-2">Actualizar</button>
+      <div class="d-flex justify-content-around mb-3">
+        <button id="motorOn" class="btn btn-success px-4">Encender</button>
+        <button id="motorOff" class="btn btn-outline-danger px-4">Apagar</button>
+      </div>
+
+      <div class="d-flex justify-content-around mb-3">
+        <button id="motorCW" class="btn btn-outline-primary px-4">CW (Horario)</button>
+        <button id="motorCCW" class="btn btn-outline-secondary px-4">CCW (Antihorario)</button>
+      </div>
+
+      <div class="mb-3">
+        <label for="motorSpeed" class="form-label">
+          Velocidad PWM: <span id="motorSpeedVal">0</span>
+        </label>
+        <input type="range" class="form-range" min="0" max="255" step="1" id="motorSpeed" />
+      </div>
+
+      <p id="motorStatus" class="fw-semibold fs-5 text-secondary">Estado: off, 0</p>
     </div>
 
-    <!-- Bloque visual de Umbrales Actuales -->
-    <div id="umbrales-actuales" class="mb-2">
-      <p>Normal: <span id="valorNormal">-</span> °C</p>
-      <p>Advertencia: <span id="valorAdvertencia">-</span> °C</p>
-      <p>Riesgo: <span id="valorRiesgo">-</span> °C</p>
+    <!-- Panel de Umbrales -->
+    <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
+      <h2 class="mb-4 text-secondary">Umbrales de Temperatura</h2>
+      <div class="d-flex justify-content-around mb-3">
+        <input type="number" id="umbralNormal" class="form-control" placeholder="Normal (°C)" />
+        <input type="number" id="umbralAdvertencia" class="form-control" placeholder="Advertencia (°C)" />
+        <input type="number" id="umbralRiesgo" class="form-control" placeholder="Riesgo (°C)" />
+        <button id="sendUmbrales" class="btn btn-primary px-3 ms-2">Actualizar</button>
+      </div>
+      <div id="umbrales-actuales" class="mb-2">
+        <p>Normal: <span id="valorNormal">-</span> °C</p>
+        <p>Advertencia: <span id="valorAdvertencia">-</span> °C</p>
+        <p>Riesgo: <span id="valorRiesgo">-</span> °C</p>
+      </div>
+      <p id="umbral-status" class="fw-semibold fs-5 text-secondary">Estado: No actualizado</p>
     </div>
 
-    <p id="umbral-status" class="fw-semibold fs-5 text-secondary">Estado: No actualizado</p>
   </div>
-   <!-- **************************************************************************************** -->
 
   <!-- Panel de mensajes desde MCU -->
   <div class="card shadow-sm p-3 rounded-4 mt-4 bg-light text-dark w-75 mx-auto">
@@ -122,11 +121,10 @@
 
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
-
   <script>
     const socket = io();
 
-    // -------------------- Elementos del Semáforo --------------------
+    // -------------------- Elementos --------------------
     const activarBtn = document.getElementById("activar");
     const apagarBtn = document.getElementById("apagar");
     const mantenimientoStatus = document.getElementById("mantenimiento-status");
@@ -136,93 +134,71 @@
     const greenBulb = document.getElementById("green");
     const log = document.getElementById("mcu-log");
 
-    // -------------------- LCD --------------------
     const lcdInput = document.getElementById("lcdInput");
     const sendLcdBtn = document.getElementById("sendLcd");
     const lcdStatus = document.getElementById("lcd-status");
 
-    // -------------------- LEDs WS2812 --------------------
     const wsColor = document.getElementById("wsColor");
     const sendWsBtn = document.getElementById("sendWs");
     const wsStatus = document.getElementById("ws-status");
 
-    //**********************************************************************************************
-    //SEMANA 12
-    // -------------------- Umbrales --------------------
+    const motorOnBtn = document.getElementById("motorOn");
+    const motorOffBtn = document.getElementById("motorOff");
+    const motorCWBtn = document.getElementById("motorCW");
+    const motorCCWBtn = document.getElementById("motorCCW");
+    const motorSpeed = document.getElementById("motorSpeed");
+    const motorSpeedVal = document.getElementById("motorSpeedVal");
+    const motorStatus = document.getElementById("motorStatus");
+
     const umbralNormalInput = document.getElementById("umbralNormal");
     const umbralAdvertenciaInput = document.getElementById("umbralAdvertencia");
     const umbralRiesgoInput = document.getElementById("umbralRiesgo");
     const sendUmbralesBtn = document.getElementById("sendUmbrales");
     const umbralStatus = document.getElementById("umbral-status");
-
-    // Bloque visual de umbrales actuales
     const valorNormal = document.getElementById("valorNormal");
     const valorAdvertencia = document.getElementById("valorAdvertencia");
     const valorRiesgo = document.getElementById("valorRiesgo");
 
-    // -------------------- Últimos umbrales recibidos --------------------
-    // Esto ayuda a filtrar valores repetidos que llegan desde MQTT
     let ultimoUmbral = { normal: null, advertencia: null, riesgo: null };
 
-    // -------------------- Eventos de socket --------------------
+    // -------------------- Umbrales --------------------
     socket.on('umbrales-update', (msg) => {
-      console.log('Recibido umbrales-update:', msg); 
       const [normal, advertencia, riesgo] = msg.split(',').map(Number);
-
-      // FILTRO: actualizar solo si cambió algún valor
       if (
         normal !== ultimoUmbral.normal ||
         advertencia !== ultimoUmbral.advertencia ||
         riesgo !== ultimoUmbral.riesgo
       ) {
-        // Actualizar inputs
         umbralNormalInput.value = normal;
         umbralAdvertenciaInput.value = advertencia;
         umbralRiesgoInput.value = riesgo;
-
-        // Actualizar visualización
         valorNormal.textContent = normal;
         valorAdvertencia.textContent = advertencia;
         valorRiesgo.textContent = riesgo;
-
-        // Actualizar último estado
         ultimoUmbral = { normal, advertencia, riesgo };
-
         umbralStatus.textContent = 'Estado: Umbrales actualizados';
-      } else {
-        // No hacer nada si los valores son los mismos
-        console.log('Umbrales repetidos, no se actualiza la UI');
       }
     });
 
-    // NUEVO: Handler para respuesta del servidor
     socket.on('umbral-response', (msg) => {
-      console.log('Recibido umbral-response:', msg); // DEPURACIÓN
       umbralStatus.textContent = msg;
     });
 
-    // -------------------- Función para enviar umbrales --------------------
     sendUmbralesBtn.addEventListener("click", () => {
       const normal = parseFloat(umbralNormalInput.value);
       const advertencia = parseFloat(umbralAdvertenciaInput.value);
       const riesgo = parseFloat(umbralRiesgoInput.value);
-
-      console.log('Click en Actualizar - Valores:', normal, advertencia, riesgo); 
-
       if (!isNaN(normal) && !isNaN(advertencia) && !isNaN(riesgo)) {
         const payload = `${normal},${advertencia},${riesgo}`;
-        console.log('Enviando umbral-message:', { topic: "equipo1/isc2025/umbral", payload }); 
-        // Emitir con topic correcto para el bridge
-        socket.emit("umbral-message", { 
-          topic: "equipo1/isc2025/umbral", 
-          payload: payload 
+        socket.emit("umbral-message", {
+          topic: "equipo1/isc2025/umbral",
+          payload: payload
         });
         umbralStatus.textContent = `Estado: Enviando ${payload}...`;
       } else {
         umbralStatus.textContent = "Estado: Ingresa valores válidos";
       }
     });
-    //**********************************************************************************************
 
     // -------------------- Semáforo --------------------
     activarBtn.addEventListener("click", () => socket.emit("activar"));
@@ -232,19 +208,17 @@
       let red = false, yellow = false, green = false;
       let statusText = state.replace(/On|Off/g, '').trim();
       let colorClass = "text-secondary";
-
       switch (state) {
         case "E0": red = true; colorClass = "text-danger"; break;
         case "E1": green = true; colorClass = "text-success"; break;
         case "E2": yellow = true; colorClass = "text-warning"; break;
         case "Mantenimiento": red = yellow = green = true; colorClass = "text-info"; break;
       }
-
       redBulb.style.backgroundColor = red ? "red" : "#ccc";
       yellowBulb.style.backgroundColor = yellow ? "yellow" : "#ccc";
       greenBulb.style.backgroundColor = green ? "green" : "#ccc";
-
       semaforoStatus.textContent = `Estado: ${statusText}`;
+      semaforoStatus.className = `fw-semibold fs-5 ${colorClass}`;
     });
 
     // -------------------- LCD --------------------
@@ -254,7 +228,6 @@
         socket.emit("lcd-message", { topic: "equipo1/isc2025/semaforo/lcd", payload: message });
       }
     });
-
     socket.on("lcd-response", (msg) => {
       lcdStatus.textContent = msg;
     });
@@ -264,9 +237,52 @@
       const color = wsColor.value;
       socket.emit("ws-message", { topic: "equipo1/isc2025/semaforo/ws", payload: color });
     });
-
     socket.on("ws-response", (msg) => {
       wsStatus.textContent = msg;
+    });
+
+    // -------------------- Motor DC (Puente H) --------------------
+    motorOnBtn.addEventListener("click", () => socket.emit("motor-command", "motor:on"));
+    motorOffBtn.addEventListener("click", () => socket.emit("motor-command", "motor:off"));
+    motorCWBtn.addEventListener("click", () => socket.emit("motor-command", "motor:cw"));
+    motorCCWBtn.addEventListener("click", () => socket.emit("motor-command", "motor:ccw"));
+
+    motorSpeed.addEventListener("input", () => {
+      motorSpeedVal.textContent = motorSpeed.value;
+    });
+    motorSpeed.addEventListener("change", () => {
+      socket.emit("motor-command", `motor:speed:${motorSpeed.value}`);
+    });
+
+    socket.on("motor-status", (payload) => {
+      const parts = payload.split(',');
+      const onoff = parts[0];
+      const dir = parts[1] || '';
+      const spd = parts[2] || '0';
+
+      const dirText = dir === 'cw' ? 'CW' : dir === 'ccw' ? 'CCW' : '';
+      motorStatus.textContent = `Estado: ${onoff}, ${dirText}, ${spd}`;
+
+      motorSpeed.value = spd;
+      motorSpeedVal.textContent = spd;
+
+      // Resaltar botón activo
+      if (dir === 'cw') {
+        motorCWBtn.classList.remove('btn-outline-primary');
+        motorCWBtn.classList.add('btn-primary');
+        motorCCWBtn.classList.remove('btn-secondary');
+        motorCCWBtn.classList.add('btn-outline-secondary');
+      } else if (dir === 'ccw') {
+        motorCCWBtn.classList.remove('btn-outline-secondary');
+        motorCCWBtn.classList.add('btn-secondary');
+        motorCWBtn.classList.remove('btn-primary');
+        motorCWBtn.classList.add('btn-outline-primary');
+      } else {
+        motorCWBtn.classList.remove('btn-primary');
+        motorCWBtn.classList.add('btn-outline-primary');
+        motorCCWBtn.classList.remove('btn-secondary');
+        motorCCWBtn.classList.add('btn-outline-secondary');
+      }
     });
 
     // -------------------- Log desde MCU --------------------
@@ -274,6 +290,7 @@
       const li = document.createElement("li");
       li.textContent = msg;
       log.appendChild(li);
+      log.scrollTop = log.scrollHeight;
     });
   </script>
 </body>

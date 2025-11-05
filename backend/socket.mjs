@@ -18,6 +18,15 @@ export function registerSocketHandlers(io, mqttClient) {
     } else if (msg.includes("Mantenimiento")) {
       newState = "Mantenimiento";
     }
+    //**********************************************************************************************
+    //ULTIMA ACTIVIDAD MOTOR DC
+    // Motor DC: si llega un estado, reenviarlo a los clientes
+    if (msg.startsWith("motor-status:")) {
+      // Formato: motor-status:on,cw,128
+      const payload = msg.substring(13).trim();
+      io.emit("motor-status", payload);
+    }
+    //**********************************************************************************************
 
     if (newState && newState !== arduino.getState()) {
       arduino.updateState(newState);
@@ -77,6 +86,18 @@ export function registerSocketHandlers(io, mqttClient) {
       });
     });
 
+    //**********************************************************************************************
+    //ULTIMA ACTIVIDAD MOTOR DC
+    // Motor DC
+    // Publica comandos hacia el MCU mediante el tópico de control general
+    // Espera payloads como: "motor:on", "motor:off", "motor:dir:cw", "motor:speed:120", "motor:set:on,cw,180"
+    socket.on("motor-command", (payload) => {
+      const cmd = typeof payload === 'string' ? payload : String(payload || '');
+      if (!cmd.startsWith('motor:')) return;
+      mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd);
+    });
+    //******************************************************************************
+    
     //******************************************************************************
     // NUEVO SEMANA 12 */
     // Umbrales
@@ -89,7 +110,7 @@ export function registerSocketHandlers(io, mqttClient) {
       });
     });
     //****************************************************************************************** */
-    
+
     socket.on("disconnect", () => console.log("❌ Cliente desconectado"));
   });
 }
