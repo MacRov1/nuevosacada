@@ -241,6 +241,7 @@
       wsStatus.textContent = msg;
     });
 
+    //------------------------- SEMANA 14 ------------------------------------------------------
     // -------------------- Motor DC (Puente H) --------------------
     motorOnBtn.addEventListener("click", () => socket.emit("motor-command", "motor:on"));
     motorOffBtn.addEventListener("click", () => socket.emit("motor-command", "motor:off"));
@@ -284,7 +285,8 @@
         motorCCWBtn.classList.add('btn-outline-secondary');
       }
     });
-
+    //-----------------------------------------------------------------------------------
+    
     // -------------------- Log desde MCU --------------------
     socket.on("arduino-message", (msg) => {
       const li = document.createElement("li");

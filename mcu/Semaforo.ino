@@ -5,10 +5,12 @@
 #include <Adafruit_NeoPixel.h>
 #include <LiquidCrystal_AIP31068_I2C.h>
 
-// ====== PUENTE H CON L293D EN SIMULIDE ======
-// Solo 4 cables: D3 → 1A, D6 → 2A, Motor+ → 2Y, Motor– → 1Y
-#define PWM_CW   6   // D3 → 1A → Sentido horario
-#define PWM_CCW  3   // D6 → 2A → Sentido antihorario
+//************** PUENTE H CON L293 EN SIMULIDE ********************
+// Solo 4 cables
+#define PNP_IZQ  11   // PNP High-side izquierdo (PWM)
+#define NPN_IZQ  3    // NPN Low-side izquierdo (PWM)
+#define PNP_DER  9    // PNP High-side derecho (PWM)
+#define NPN_DER  6    // NPN Low-side derecho (PWM)
 
 int motorVelocidad = 0;      // 0-255
 bool motorSentidoCW = true;  // true = horario
@@ -17,7 +19,7 @@ bool motorEncendido = false;
 //--------------------------------------------------------------------
 // Pines y objetos globales
 const int ledVerde = 8;
-const int ledAmarillo = 9;
+const int ledAmarillo = 4;
 const int ledRojo = 12;
 const int pulsador = 2;
 #define ONE_WIRE_BUS 7
@@ -77,29 +79,57 @@ void setTempColor(uint32_t color) {
   Serial.print("LED Térmico color: "); Serial.println(color, HEX);
 }
 
-// ====== MOTOR DC CON PUENTE H L293D ======
-// Aplicar PWM según estado
+//*************************************************************************************
+// *********** MOTOR DC CON PUENTE H L293 ********************************************
 void aplicarMotor() {
-  if (!motorEncendido || motorVelocidad == 0) {
-    analogWrite(PWM_CW, 0);
-    analogWrite(PWM_CCW, 0);
+  // Debug: ver estado interno
+  Serial.print("DEBUG aplicarMotor -> encendido: ");
+  Serial.print(motorEncendido ? "1" : "0");
+  Serial.print(" | sentido: ");
+  Serial.print(motorSentidoCW ? "cw" : "ccw");
+  Serial.print(" | velocidad: ");
+  Serial.println(motorVelocidad);
+
+  if (!motorEncendido) {
+    analogWrite(PNP_IZQ, 255);  // PNP OFF 
+    analogWrite(NPN_IZQ, 0);    // NPN OFF
+    analogWrite(PNP_DER, 255);  // PNP OFF
+    analogWrite(NPN_DER, 0);    // NPN OFF
     Serial.println("motor-status:off,0");
     return;
   }
+  if (motorVelocidad <= 0) {
+    analogWrite(PNP_IZQ, 255);
+    analogWrite(NPN_IZQ, 0);
+    analogWrite(PNP_DER, 255);
+    analogWrite(NPN_DER, 0);
+    Serial.print("motor-status:on,");
+    Serial.print(motorSentidoCW ? "cw" : "ccw");
+    Serial.println(",0");
+    return;
+  }
+
+  int pwm = constrain(motorVelocidad, 0, 255);
 
   if (motorSentidoCW) {
-    analogWrite(PWM_CW, motorVelocidad);
-    analogWrite(PWM_CCW, 0);
+    analogWrite(PNP_IZQ, 255 - pwm);
+    analogWrite(NPN_IZQ, 0);
+    analogWrite(PNP_DER, 255 - pwm);
+    analogWrite(NPN_DER, pwm);
   } else {
-    analogWrite(PWM_CW, 0);
-    analogWrite(PWM_CCW, motorVelocidad);
+    analogWrite(PNP_IZQ, pwm);
+    analogWrite(NPN_IZQ, 255 - pwm);
+    analogWrite(PNP_DER, pwm);
+    analogWrite(NPN_DER, 0);
   }
 
   Serial.print("motor-status:on,");
   Serial.print(motorSentidoCW ? "cw" : "ccw");
   Serial.print(",");
-  Serial.println(motorVelocidad);
+  Serial.println(pwm);
 }
+//---------------------------------------------------------------------------------------
+//****************************************************************************************
 
 void actualizarLEDTemp(float t1, float t2, float t3) {
   float temps[3] = {t1, t2, t3};
@@ -224,15 +254,17 @@ void manejarComandosSerial() {
       setUmbrales(n, a, r);
     }
   }
-  // ====== CONTROL DEL MOTOR CON PUENTE H ======
+  // --------------- CONTROL DEL MOTOR CON PUENTE H -----------------------
   else if (command.startsWith("motor:")) {
     String rest = command.substring(6);
     rest.trim();
     rest.toLowerCase();
 
+    Serial.print("motor-cmd recibido: ");
+    Serial.println(rest);
+
     if (rest == "on") {
       motorEncendido = true;
-      if (motorVelocidad == 0) motorVelocidad = 150;
       aplicarMotor();
     }
     else if (rest == "off") {
@@ -241,16 +273,26 @@ void manejarComandosSerial() {
     }
     else if (rest == "cw") {
       motorSentidoCW = true;
-      aplicarMotor();
+      Serial.println("motor: sentido -> cw (interno actualizado)");
+      if (motorEncendido) aplicarMotor();
+      else Serial.println("motor: cambiado sentido, pero motor está OFF");
     }
     else if (rest == "ccw") {
       motorSentidoCW = false;
-      aplicarMotor();
+      Serial.println("motor: sentido -> ccw (interno actualizado)");
+      if (motorEncendido) aplicarMotor();
+      else Serial.println("motor: cambiado sentido, pero motor está OFF");
     }
     else if (rest.startsWith("speed:")) {
-      motorVelocidad = rest.substring(6).toInt();
-      motorVelocidad = constrain(motorVelocidad, 0, 255);
-      aplicarMotor();
+      int nuevaVel = rest.substring(6).toInt();
+      motorVelocidad = constrain(nuevaVel, 0, 255);
+      Serial.print("motor: velocidad seteada a ");
+      Serial.println(motorVelocidad);
+      if (motorEncendido) {
+        aplicarMotor();
+      } else {
+        Serial.println("motor: velocidad actualizada pero motor OFF");
+      }
     }
     else if (rest.startsWith("set:")) {
       // motor:set:on,cw,200
@@ -264,6 +306,10 @@ void manejarComandosSerial() {
         motorEncendido = (onoff == "on");
         motorSentidoCW = (dir == "cw");
         motorVelocidad = constrain(vel, 0, 255);
+        Serial.print("motor:set -> ");
+        Serial.print(onoff); Serial.print(", ");
+        Serial.print(dir); Serial.print(", ");
+        Serial.println(motorVelocidad);
         aplicarMotor();
       }
     }
@@ -332,9 +378,16 @@ void setup() {
   pinMode(ledRojo, OUTPUT);
   pinMode(pulsador, INPUT_PULLUP);
 
+  //************************************************************
   // ====== PUENTE H PINS ======
-  pinMode(PWM_CW, OUTPUT);
-  pinMode(PWM_CCW, OUTPUT);
+  pinMode(PNP_IZQ, OUTPUT);
+  pinMode(NPN_IZQ, OUTPUT);
+  pinMode(PNP_DER, OUTPUT);
+  pinMode(NPN_DER, OUTPUT);
+
+  // Inicialmente motor apagado
+  aplicarMotor();
+  //************************************************************
 
   Serial.begin(9600);
   lcd2.init();
