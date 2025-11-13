@@ -72,7 +72,7 @@
 
     <!-- Panel Motor DC (Puente H con L293D) -->
     <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
-      <h2 class="mb-4 text-secondary">Motor DC - Puente H (L293D)</h2>
+      <h2 class="mb-4 text-secondary">Motor DC - Puente H (BJT)</h2>
 
       <div class="d-flex justify-content-around mb-3">
         <button id="motorOn" class="btn btn-success px-4">Encender</button>
@@ -80,8 +80,8 @@
       </div>
 
       <div class="d-flex justify-content-around mb-3">
-        <button id="motorCW" class="btn btn-outline-primary px-4">CW (Horario)</button>
-        <button id="motorCCW" class="btn btn-outline-secondary px-4">CCW (Antihorario)</button>
+        <button id="motorCW" class="btn btn-outline-primary px-4">Antihorario</button>
+        <button id="motorCCW" class="btn btn-outline-secondary px-4">Horario</button>
       </div>
 
       <div class="mb-3">
@@ -112,6 +112,30 @@
     </div>
 
   </div>
+
+        <!-- Panel ESP32: Escaneo de Redes Wi-Fi -->
+      <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 100%;">
+        <h2 class="mb-4 text-secondary">Redes Wi-Fi detectadas por ESP32</h2>
+        <button id="scanWifi" class="btn btn-primary mb-3">🔍 Forzar nuevo escaneo</button>
+        <div class="table-responsive">
+          <table class="table table-striped table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>SSID</th>
+                <th>BSSID (MAC)</th>
+                <th>Canal</th>
+                <th>RSSI (dBm)</th>
+                <th>Cifrado</th>
+              </tr>
+            </thead>
+            <tbody id="wifiTableBody">
+              <tr><td colspan="6" class="text-muted">Esperando datos del ESP32...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
 
   <!-- Panel de mensajes desde MCU -->
   <div class="card shadow-sm p-3 rounded-4 mt-4 bg-light text-dark w-75 mx-auto">
@@ -200,6 +224,96 @@
       }
     });
 
+        // =====================================================================
+        //ESP32 - Mostrar redes Wi-Fi escaneadas
+        // =====================================================================
+        const scanWifiBtn = document.getElementById("scanWifi");
+        const wifiTableBody = document.getElementById("wifiTableBody");
+
+        let scanBuffer = [];
+        let isScanning = false;
+
+        // Iniciar escaneo manual
+        scanWifiBtn.addEventListener("click", () => {
+          socket.emit("esp32-command", "SCAN_WIFI");
+          scanBuffer = [];
+          isScanning = true;
+          wifiTableBody.innerHTML = '<tr><td colspan="6" class="text-muted">Escaneando...</td></tr>';
+        });
+
+        // RECIBIR CADA LÍNEA
+        socket.on("esp32-message", (msg) => {
+          const line = msg.trim();
+          console.log("ESP32:", line);
+
+          // Si estamos en modo escaneo, acumular
+          if (isScanning) {
+            scanBuffer.push(line);
+
+            
+            if (line === "Fin del escaneo.") {
+              isScanning = false;
+              parseAndRenderWifi(scanBuffer);
+            }
+          }
+          // Si NO estamos escaneando, pero llega "Iniciando escaneo...", activar modo buffer
+          else if (line === "Iniciando escaneo...") {
+            scanBuffer = [line];
+            isScanning = true;
+            wifiTableBody.innerHTML = '<tr><td colspan="6" class="text-muted">Escaneando...</td></tr>';
+          }
+        });
+
+        // PROCESAR Y MOSTRAR
+        function parseAndRenderWifi(lines) {
+          const networks = [];
+          let current = {};
+
+          lines.forEach((line) => {
+            if (line.startsWith("Red #")) {
+              if (Object.keys(current).length > 0) {
+                networks.push(current);
+              }
+              current = {};
+            } else if (line.startsWith("SSID:")) {
+              current.ssid = line.substring(5).trim();
+            } else if (line.startsWith("BSSID:")) {
+              current.bssid = line.substring(6).trim();
+            } else if (line.startsWith("Canal:")) {
+              current.canal = line.substring(6).trim();
+            } else if (line.startsWith("RSSI:")) {
+              current.rssi = line.replace("RSSI:", "").replace("dBm", "").trim();
+            } else if (line.startsWith("Cifrado:")) {
+              current.cifrado = line.substring(8).trim();
+            }
+          });
+
+          // Última red
+          if (Object.keys(current).length > 0) {
+            networks.push(current);
+          }
+
+          // Renderizar
+          wifiTableBody.innerHTML = "";
+          if (networks.length === 0) {
+            wifiTableBody.innerHTML = '<tr><td colspan="6" class="text-muted">No se detectaron redes.</td></tr>';
+          } else {
+            networks.forEach((net, i) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${i + 1}</td>
+                <td>${net.ssid || "-"}</td>
+                <td>${net.bssid || "-"}</td>
+                <td>${net.canal || "-"}</td>
+                <td>${net.rssi || "-"}</td>
+                <td>${net.cifrado || "-"}</td>
+              `;
+              wifiTableBody.appendChild(row);
+            });
+          }
+        }
+      //---------------------------------------------------------------------------------------
+      
     // -------------------- Semáforo --------------------
     activarBtn.addEventListener("click", () => socket.emit("activar"));
     apagarBtn.addEventListener("click", () => socket.emit("apagar"));
@@ -245,8 +359,8 @@
     // -------------------- Motor DC (Puente H) --------------------
     motorOnBtn.addEventListener("click", () => socket.emit("motor-command", "motor:on"));
     motorOffBtn.addEventListener("click", () => socket.emit("motor-command", "motor:off"));
-    motorCWBtn.addEventListener("click", () => socket.emit("motor-command", "motor:cw"));
-    motorCCWBtn.addEventListener("click", () => socket.emit("motor-command", "motor:ccw"));
+    motorCWBtn.addEventListener("click", () => socket.emit("motor-command", "motor:ho"));
+    motorCCWBtn.addEventListener("click", () => socket.emit("motor-command", "motor:ah"));
 
     motorSpeed.addEventListener("input", () => {
       motorSpeedVal.textContent = motorSpeed.value;
@@ -261,19 +375,19 @@
       const dir = parts[1] || '';
       const spd = parts[2] || '0';
 
-      const dirText = dir === 'cw' ? 'CW' : dir === 'ccw' ? 'CCW' : '';
+      const dirText = dir === 'ho' ? 'HO' : dir === 'ah' ? 'AH' : '';
       motorStatus.textContent = `Estado: ${onoff}, ${dirText}, ${spd}`;
 
       motorSpeed.value = spd;
       motorSpeedVal.textContent = spd;
 
       // Resaltar botón activo
-      if (dir === 'cw') {
+      if (dir === 'ho') {
         motorCWBtn.classList.remove('btn-outline-primary');
         motorCWBtn.classList.add('btn-primary');
         motorCCWBtn.classList.remove('btn-secondary');
         motorCCWBtn.classList.add('btn-outline-secondary');
-      } else if (dir === 'ccw') {
+      } else if (dir === 'ah') {
         motorCCWBtn.classList.remove('btn-outline-secondary');
         motorCCWBtn.classList.add('btn-secondary');
         motorCWBtn.classList.remove('btn-primary');

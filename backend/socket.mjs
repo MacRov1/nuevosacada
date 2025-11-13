@@ -1,14 +1,19 @@
 import { arduino } from "./arduino.mjs";
+import { portESP } from "./esp32.mjs";
 
 export function registerSocketHandlers(io, mqttClient) {
-  // Reenviar mensajes de Arduino (ahora de MQTT) a todos los clientes
+  // ==============================================================
+  // 🔁 Reenviar mensajes desde Arduino al frontend
+  // ==============================================================
   arduino.onMessageCallback((msg) => {
-    io.emit("led-status", arduino.getState()); // Mantenido para compatibilidad con LED
-    io.emit("arduino-message", msg); // Mostrar mensaje textual en el log
+    io.emit("led-status", arduino.getState());
+    io.emit("arduino-message", msg);
 
     let newState = null;
+
+    // Detecta el estado actual del semáforo
     if (msg.startsWith("Estado ")) {
-      newState = msg.substring(7).trim(); // Extrae "E0", "E1", "E2", "Mantenimiento"
+      newState = msg.substring(7).trim();
     } else if (msg.includes("E0")) {
       newState = "E0";
     } else if (msg.includes("E1")) {
@@ -18,43 +23,55 @@ export function registerSocketHandlers(io, mqttClient) {
     } else if (msg.includes("Mantenimiento")) {
       newState = "Mantenimiento";
     }
-    //**********************************************************************************************
-    //ULTIMA ACTIVIDAD MOTOR DC
-    // Motor DC: si llega un estado, reenviarlo a los clientes
+
+    // ==============================================================
+    // 🔧 Motor DC
+    // ==============================================================
     if (msg.startsWith("motor-status:")) {
-      // Formato: motor-status:on,cw,128
       const payload = msg.substring(13).trim();
       io.emit("motor-status", payload);
     }
-    //**********************************************************************************************
 
+    // ==============================================================
+    // 🚦 Cambio de estado del semáforo
+    // ==============================================================
     if (newState && newState !== arduino.getState()) {
       arduino.updateState(newState);
-      io.emit("semaforo-status", newState); // Emitir estado del semáforo
+      io.emit("semaforo-status", newState);
     }
   });
 
+  // ==============================================================
+  // Manejo de eventos del frontend (Socket.IO)
+  // ==============================================================
   io.on("connection", (socket) => {
     console.log("🔌 Cliente conectado");
 
+    // Estado inicial
     socket.emit("led-status", arduino.getState());
     socket.emit("semaforo-status", arduino.getState());
 
-    // LED (compatibilidad)
+    // ==============================================================
+    // LED
+    // ==============================================================
     socket.on("led-on", () =>
       arduino.turnOn((cmd) => mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd))
     );
+
     socket.on("led-off", () =>
       arduino.turnOff((cmd) => mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd))
     );
 
+    // ==============================================================
     // Semáforo
+    // ==============================================================
     socket.on("activar", () =>
       arduino.sendCommand(
         (cmd) => mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd),
         "activar"
       )
     );
+
     socket.on("apagar", () =>
       arduino.sendCommand(
         (cmd) => mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd),
@@ -62,55 +79,62 @@ export function registerSocketHandlers(io, mqttClient) {
       )
     );
 
-    // LCD
+    // ==============================================================
+    //LCD
+    // ==============================================================
     socket.on("lcd-message", (data) => {
       const { topic, payload } = data;
       mqttClient.publish(topic, payload, (err) => {
-        if (err) {
-          socket.emit("lcd-response", "Error al enviar mensaje");
-        } else {
-          socket.emit("lcd-response", "Mensaje enviado correctamente");
-        }
+        socket.emit("lcd-response", err ? "Error al enviar mensaje" : "Mensaje enviado correctamente");
       });
     });
 
+    // ==============================================================
     // WS2812
+    // ==============================================================
     socket.on("ws-message", (data) => {
       const { topic, payload } = data;
       mqttClient.publish(topic, payload, (err) => {
-        if (err) {
-          socket.emit("ws-response", "Error al enviar mensaje");
-        } else {
-          socket.emit("ws-response", "Mensaje enviado correctamente");
-        }
+        socket.emit("ws-response", err ? "Error al enviar mensaje" : "Mensaje enviado correctamente");
       });
     });
 
-    //**********************************************************************************************
-    //ULTIMA ACTIVIDAD MOTOR DC
+    // ==============================================================
     // Motor DC
-    // Publica comandos hacia el MCU mediante el tópico de control general
-    // Espera payloads como: "motor:on", "motor:off", "motor:dir:cw", "motor:speed:120", "motor:set:on,cw,180"
+    // ==============================================================
     socket.on("motor-command", (payload) => {
-      const cmd = typeof payload === 'string' ? payload : String(payload || '');
-      if (!cmd.startsWith('motor:')) return;
+      const cmd = typeof payload === "string" ? payload : String(payload || "");
+      if (!cmd.startsWith("motor:")) return;
       mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd);
     });
-    //******************************************************************************
-    
-    //******************************************************************************
-    // NUEVO SEMANA 12 */
+
+    // ==============================================================
     // Umbrales
+    // ==============================================================
     socket.on("umbral-message", (data) => {
       const { topic, payload } = data;
-
       mqttClient.publish(topic, payload, { qos: 0, retain: false }, (err) => {
-        if (err) socket.emit("umbral-response", "Error al enviar umbral");
-        else socket.emit("umbral-response", "Umbral enviado correctamente");
+        socket.emit("umbral-response", err ? "Error al enviar umbral" : "Umbral enviado correctamente");
       });
     });
-    //****************************************************************************************** */
 
+    // ==============================================================
+    // ESP32 — recepción de comandos desde el frontend
+    // ==============================================================
+    socket.on("esp32-command", (cmd) => {
+      if (portESP && portESP.writable) {
+        portESP.write(cmd + "\n", (err) => {
+          if (err) console.error("❌ Error enviando al ESP32:", err.message);
+          else console.log("➡️ Comando enviado al ESP32:", cmd);
+        });
+      } else {
+        console.warn("⚠️ ESP32 no disponible para escribir.");
+      }
+    });
+
+    // ==============================================================
+    // 🔌 Desconexión
+    // ==============================================================
     socket.on("disconnect", () => console.log("❌ Cliente desconectado"));
   });
 }
