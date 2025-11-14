@@ -1,9 +1,10 @@
 import { arduino } from "./arduino.mjs";
-import { portESP } from "./esp32.mjs";
+import { portESP } from "./esp32.mjs"; //Nuevo Semana 14
+import { agregarRedUnica, getEstado } from "./wifi-counter.mjs"; //Nuevo Semana 14
 
 export function registerSocketHandlers(io, mqttClient) {
   // ==============================================================
-  // 🔁 Reenviar mensajes desde Arduino al frontend
+  // Reenviar mensajes desde Arduino al frontend
   // ==============================================================
   arduino.onMessageCallback((msg) => {
     io.emit("led-status", arduino.getState());
@@ -25,7 +26,7 @@ export function registerSocketHandlers(io, mqttClient) {
     }
 
     // ==============================================================
-    // 🔧 Motor DC
+    // Motor DC
     // ==============================================================
     if (msg.startsWith("motor-status:")) {
       const payload = msg.substring(13).trim();
@@ -33,7 +34,7 @@ export function registerSocketHandlers(io, mqttClient) {
     }
 
     // ==============================================================
-    // 🚦 Cambio de estado del semáforo
+    // Cambio de estado del semáforo
     // ==============================================================
     if (newState && newState !== arduino.getState()) {
       arduino.updateState(newState);
@@ -105,9 +106,8 @@ export function registerSocketHandlers(io, mqttClient) {
     socket.on("motor-command", (payload) => {
       const cmd = typeof payload === "string" ? payload : String(payload || "");
       if (!cmd.startsWith("motor:")) return;
-      mqttClient.publish(process.env.MQTT_TOPIC_IN, cmd);
+      mqttClient.publish(process.env.MQTT_TOPIC_MOTOR, cmd);
     });
-
     // ==============================================================
     // Umbrales
     // ==============================================================
@@ -118,9 +118,9 @@ export function registerSocketHandlers(io, mqttClient) {
       });
     });
 
-    // ==============================================================
+    // *************************************************************************************************************
+    //NUEVO SEMANA 14
     // ESP32 — recepción de comandos desde el frontend
-    // ==============================================================
     socket.on("esp32-command", (cmd) => {
       if (portESP && portESP.writable) {
         portESP.write(cmd + "\n", (err) => {
@@ -131,7 +131,25 @@ export function registerSocketHandlers(io, mqttClient) {
         console.warn("⚠️ ESP32 no disponible para escribir.");
       }
     });
+    // Redes WiFi — guardado persistente
+    socket.on("wifi-new", (net) => {
+      if (!net || !net.bssid) return;
 
+      const added = agregarRedUnica(net.bssid);
+      if (added) {
+        console.log(`🆕 Nueva red guardada: ${net.ssid || "(sin SSID)"} (${net.bssid})`);
+      }
+
+      // Enviar al frontend la lista actualizada
+      const estado = getEstado();
+      socket.emit("wifi-networks", Array.from(estado.macs).map(mac => ({ bssid: mac })));
+    });
+
+      // Enviar las redes guardadas al conectarse
+      const estado = getEstado();
+      const redesGuardadas = Array.from(estado.macs).map(mac => ({ bssid: mac }));
+      socket.emit("wifi-networks", redesGuardadas);
+    //****************************************************************************************** */
     // ==============================================================
     // 🔌 Desconexión
     // ==============================================================

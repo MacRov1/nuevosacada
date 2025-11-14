@@ -70,7 +70,10 @@
       <p id="ws-status" class="fw-semibold fs-5 text-secondary">Estado: Desconectado</p>
     </div>
 
-    <!-- Panel Motor DC (Puente H con L293D) -->
+
+     <!--****************************************************************************************************-->
+     <!-- NUEVO SEMANA 14 -->
+    <!-- Panel Motor DC (Puente H con BJT) -->
     <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
       <h2 class="mb-4 text-secondary">Motor DC - Puente H (BJT)</h2>
 
@@ -80,8 +83,8 @@
       </div>
 
       <div class="d-flex justify-content-around mb-3">
-        <button id="motorCW" class="btn btn-outline-primary px-4">Antihorario</button>
-        <button id="motorCCW" class="btn btn-outline-secondary px-4">Horario</button>
+        <button id="motorCW" class="btn btn-outline-primary px-4">Horario</button>
+        <button id="motorCCW" class="btn btn-outline-secondary px-4">Antihorario</button>
       </div>
 
       <div class="mb-3">
@@ -93,6 +96,8 @@
 
       <p id="motorStatus" class="fw-semibold fs-5 text-secondary">Estado: off, 0</p>
     </div>
+     <!--****************************************************************************************************-->
+
 
     <!-- Panel de Umbrales -->
     <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 48%;">
@@ -112,6 +117,17 @@
     </div>
 
   </div>
+
+   <!--****************************************************************************************************-->
+    <!--NUEVO SEMANA 14-->
+      <!-- Panel Contador de Redes Wi-Fi -->
+      <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 100%;">
+        <h2 class="mb-3 text-secondary">Contador de Redes Wi-Fi</h2>
+        <p class="fw-bold text-primary fs-4 mb-0">
+          Cantidad de redes encontradas: <span id="wifiCount">0</span>
+        </p>
+        <small class="text-muted">Actualizado automáticamente al escanear</small>
+      </div>
 
         <!-- Panel ESP32: Escaneo de Redes Wi-Fi -->
       <div class="card shadow-sm p-4 rounded-4 text-center bg-white mb-3" style="width: 100%;">
@@ -135,6 +151,7 @@
           </table>
         </div>
       </div>
+       <!--****************************************************************************************************-->
 
 
   <!-- Panel de mensajes desde MCU -->
@@ -223,17 +240,32 @@
         umbralStatus.textContent = "Estado: Ingresa valores válidos";
       }
     });
-
-        // =====================================================================
-        //ESP32 - Mostrar redes Wi-Fi escaneadas
-        // =====================================================================
+      // <!--****************************************************************************************************-->
+        // NUEVO SEMANA 14
         const scanWifiBtn = document.getElementById("scanWifi");
         const wifiTableBody = document.getElementById("wifiTableBody");
+        const wifiCountSpan = document.getElementById("wifiCount"); 
 
         let scanBuffer = [];
         let isScanning = false;
+        let redesVistas = new Set(); // Guarda BSSIDs únicos (MAC)
+        let totalRedesUnicas = 0;
 
-        // Iniciar escaneo manual
+        // Cargar redes guardadas al entrar a la página
+        socket.on("wifi-networks", (savedNetworks) => {
+          if (!savedNetworks || !Array.isArray(savedNetworks) || savedNetworks.length === 0) {
+            wifiTableBody.innerHTML = '<tr><td colspan="6" class="text-muted">Esperando escaneo...</td></tr>';
+            return;
+          }
+
+          redesVistas = new Set(savedNetworks.map(net => (net.mac || net.bssid || "").toUpperCase()));
+          totalRedesUnicas = redesVistas.size;
+          wifiCountSpan.textContent = totalRedesUnicas;
+
+          wifiTableBody.innerHTML = '<tr><td colspan="6" class="text-muted">Esperando escaneo...</td></tr>';
+        });
+
+        //Iniciar escaneo manual desde el botón
         scanWifiBtn.addEventListener("click", () => {
           socket.emit("esp32-command", "SCAN_WIFI");
           scanBuffer = [];
@@ -241,30 +273,26 @@
           wifiTableBody.innerHTML = '<tr><td colspan="6" class="text-muted">Escaneando...</td></tr>';
         });
 
-        // RECIBIR CADA LÍNEA
+        //Recibir datos línea a línea del ESP32
         socket.on("esp32-message", (msg) => {
           const line = msg.trim();
           console.log("ESP32:", line);
 
-          // Si estamos en modo escaneo, acumular
           if (isScanning) {
             scanBuffer.push(line);
 
-            
             if (line === "Fin del escaneo.") {
               isScanning = false;
               parseAndRenderWifi(scanBuffer);
             }
-          }
-          // Si NO estamos escaneando, pero llega "Iniciando escaneo...", activar modo buffer
-          else if (line === "Iniciando escaneo...") {
+          } else if (line === "Iniciando escaneo...") {
             scanBuffer = [line];
             isScanning = true;
             wifiTableBody.innerHTML = '<tr><td colspan="6" class="text-muted">Escaneando...</td></tr>';
           }
         });
 
-        // PROCESAR Y MOSTRAR
+        // Procesar resultado del escaneo y mostrarlo
         function parseAndRenderWifi(lines) {
           const networks = [];
           let current = {};
@@ -278,7 +306,7 @@
             } else if (line.startsWith("SSID:")) {
               current.ssid = line.substring(5).trim();
             } else if (line.startsWith("BSSID:")) {
-              current.bssid = line.substring(6).trim();
+              current.bssid = line.substring(6).trim().toUpperCase();
             } else if (line.startsWith("Canal:")) {
               current.canal = line.substring(6).trim();
             } else if (line.startsWith("RSSI:")) {
@@ -288,12 +316,22 @@
             }
           });
 
-          // Última red
           if (Object.keys(current).length > 0) {
             networks.push(current);
           }
 
-          // Renderizar
+          //Enviar redes nuevas al backend para guardar 
+          networks.forEach(net => {
+            if (net.bssid && !redesVistas.has(net.bssid)) {
+              redesVistas.add(net.bssid);
+              socket.emit("wifi-new", net); //Envía red nueva al backend
+            }
+          });
+
+          totalRedesUnicas = redesVistas.size;
+          wifiCountSpan.textContent = totalRedesUnicas;
+
+          // === Renderizar tabla actualizada ===
           wifiTableBody.innerHTML = "";
           if (networks.length === 0) {
             wifiTableBody.innerHTML = '<tr><td colspan="6" class="text-muted">No se detectaron redes.</td></tr>';
@@ -303,7 +341,7 @@
               row.innerHTML = `
                 <td>${i + 1}</td>
                 <td>${net.ssid || "-"}</td>
-                <td>${net.bssid || "-"}</td>
+                <td><code>${net.bssid || "-"}</code></td>
                 <td>${net.canal || "-"}</td>
                 <td>${net.rssi || "-"}</td>
                 <td>${net.cifrado || "-"}</td>
@@ -312,8 +350,9 @@
             });
           }
         }
-      //---------------------------------------------------------------------------------------
-      
+    //<!--****************************************************************************************************-->
+
+    
     // -------------------- Semáforo --------------------
     activarBtn.addEventListener("click", () => socket.emit("activar"));
     apagarBtn.addEventListener("click", () => socket.emit("apagar"));
